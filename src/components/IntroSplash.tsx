@@ -232,6 +232,22 @@ function EdinburghSkyline() {
       preserveAspectRatio="xMidYEnd meet"
       aria-hidden="true"
     >
+      <defs>
+        {/* Soft cone for the tram's headlight beam, fading from bright at
+            the bulb to transparent at the far end. */}
+        <linearGradient
+          id="rr-headlight-beam"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="0%"
+        >
+          <stop offset="0%" stopColor="#fff3c4" stopOpacity="0" />
+          <stop offset="55%" stopColor="#fff3c4" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#fff3c4" stopOpacity="0.85" />
+        </linearGradient>
+      </defs>
+
       {/* Distant hill behind the castle (Arthur's Seat vibe) */}
       <path
         className="rr-layer rr-layer-far"
@@ -486,8 +502,20 @@ function EdinburghSkyline() {
             <circle cx="0" cy="-66" r="3" fill="#fff3c4" />
           </g>
         ))}
-        {/* Edinburgh tram — friendly maroon */}
+        {/* Edinburgh tram — friendly maroon. The tram travels right→left,
+            so the front (with the headlight) is on the left side. */}
         <g className="rr-tram" transform="translate(1080, 446)">
+          {/* Headlight beam — only visible at night */}
+          <g className="rr-headlight">
+            <path
+              d="M -2 -13 L -96 -26 L -96 16 L -2 -3 Z"
+              fill="url(#rr-headlight-beam)"
+            />
+            <circle cx="3" cy="-10" r="4.5" fill="#fff3c4" opacity="0.6" />
+            <circle cx="3" cy="-10" r="2.6" fill="#fff7d6" />
+            <circle cx="3" cy="-10" r="1.2" fill="#ffffff" />
+          </g>
+
           <rect x="0" y="-30" width="160" height="34" rx="6" fill="#7a2233" />
           <rect x="0" y="-30" width="160" height="6" rx="3" fill="#3b3328" />
           <rect x="6" y="-22" width="24" height="14" rx="2" fill="#d5e5f0" />
@@ -609,6 +637,28 @@ const splashCss = `
 .rr-splash-night .rr-skyline rect[fill="#2a3a4a"] {
   fill: #ffd36b;
   opacity: 0.95;
+}
+
+/* Tram windows glow warm at night (interior lights). */
+.rr-splash-night .rr-skyline rect[fill="#d5e5f0"] {
+  fill: #ffe39c;
+}
+
+/* Tram headlight — hidden in day, fades in with a brief flicker at night. */
+.rr-headlight {
+  opacity: 0;
+  transition: opacity 2s ease-in-out;
+}
+.rr-splash-night .rr-headlight {
+  animation: rrHeadlightOn 2.4s 0.6s ease-out forwards;
+}
+@keyframes rrHeadlightOn {
+  0%   { opacity: 0; }
+  35%  { opacity: 0.4; }
+  45%  { opacity: 0.1; }
+  60%  { opacity: 1; }
+  72%  { opacity: 0.7; }
+  100% { opacity: 1; }
 }
 
 /* Each firework has a central flash + three rings of streak sparks (outer,
