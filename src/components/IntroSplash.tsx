@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import AnimatedRobin from "./AnimatedRobin";
 
 type Props = {
   onEnter: () => void;
@@ -11,9 +10,9 @@ type Props = {
  *
  * The scene is an Edinburgh-flavoured flat illustration (castle, tenements,
  * Scott-Monument-style spire) drawn in the existing pastel palette, with a
- * plane drifting overhead, clouds floating in, and the animated Robin
- * hopping into view. The title "Risk Robin" lands letter-by-letter with a
- * soft spring, and an `Enter` button fades in once the animation settles.
+ * plane drifting overhead, clouds floating in, and a tram crossing the
+ * scene. The title "Risk Robin" lands letter-by-letter with a soft spring,
+ * and an `Enter` button fades in once the animation settles.
  *
  * Players can click anywhere to skip ahead to the Enter button. The button
  * itself calls `onEnter` to dismiss the splash and reveal the game beneath.
@@ -73,13 +72,6 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
 
       {/* Edinburgh skyline */}
       <EdinburghSkyline />
-
-      {/* Tiny Robin perched on the middle-left tenement roofline. Sized
-          to roughly 20% of the earlier hero scale so it reads as a
-          detail of the scene rather than the main character. */}
-      <div className="rr-robin-stage" aria-hidden="true">
-        <AnimatedRobin className="w-8 sm:w-10 md:w-12 aspect-[16/9]" />
-      </div>
 
       {/* Centred content stack: title on top, Enter beneath */}
       <div className="rr-stack">
@@ -612,32 +604,6 @@ const splashCss = `
   to   { opacity: 1; }
 }
 
-/* ---- Robin entry ----
-   The Chief Analyst Robin PNG ships with a white background. We use
-   mix-blend-mode: multiply so the PNG's white pixels multiply out to the
-   underlying sky (white * anything = anything) while every coloured
-   pixel of the bird stays fully opaque. Combined with a perch high up
-   on the castle keep — sitting against the sky rather than over the
-   dark stone — the Robin reads as a solid little character throughout
-   its hop-in. */
-.rr-robin-stage {
-  position: absolute;
-  bottom: clamp(190px, 38vh, 340px);
-  left: clamp(180px, 26vw, 380px);
-  transform: translate(-220%, 0);
-  animation: rrRobinIn 1.2s 0.9s cubic-bezier(.34,1.3,.5,1) both;
-  z-index: 6;
-  mix-blend-mode: multiply;
-}
-@keyframes rrRobinIn {
-  0%   { transform: translate(-220%, 40px); }
-  35%  { transform: translate(-110%, -16px); }
-  55%  { transform: translate(-70%, 0); }
-  75%  { transform: translate(-35%, -10px); }
-  90%  { transform: translate(-6%, 0); }
-  100% { transform: translate(0, 0); }
-}
-
 /* ---- Centred stack: title on top, Enter beneath ---- */
 .rr-stack {
   position: absolute;
@@ -761,7 +727,6 @@ const splashCss = `
   .rr-flag,
   .rr-saltire,
   .rr-tram,
-  .rr-robin-stage,
   .rr-letter,
   .rr-enter {
     animation: none !important;
