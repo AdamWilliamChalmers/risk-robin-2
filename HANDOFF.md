@@ -282,12 +282,23 @@ welcome screen, store it in component state in `WelcomeModal` and pass it into
 Same file: `const HAND_SIZE = 8;`. Used at `START_GAME` and is implicit in the
 draw-replacement logic (which always tops up by 1).
 
-### 5.6 LLM integration (dev-only OpenAI proxy)
+### 5.6 LLM integration (OpenAI proxy — dev + Vercel Functions)
 
-The game ships wired to OpenAI for three pieces of copy that used to be
+The game ships wired to OpenAI for five pieces of copy that used to be
 templated. Everything is opt-in — without an API key it's deterministic.
 
-**Turning it on:**
+The five endpoints are implemented **once** in `server/aiHandlers.ts` (handler
+functions, shared prompts, OpenAI client, request validators) and surfaced two
+different ways depending on environment:
+
+- **Dev (`npm run dev`):** mounted as Vite middleware by `server/aiPlugin.ts`,
+  using `.env` / `.env.local` loaded via `loadEnv`.
+- **Production (Vercel):** mounted as Vercel Functions in `api/*.ts`, using
+  env vars from the project's Vercel Environment Variables UI.
+
+Both paths import the same handler functions, so dev and prod can't drift.
+
+**Turning it on (local):**
 
 ```bash
 cp .env.example .env
@@ -296,8 +307,7 @@ npm run dev
 ```
 
 That's it. `vite.config.ts` reads the key with `loadEnv` and passes it into
-the `aiPlugin` from `server/aiPlugin.ts`, which registers three POST
-endpoints as Vite middleware. The browser never sees the key.
+the `aiPlugin` from `server/aiPlugin.ts`. The browser never sees the key.
 
 **What the LLM replaces:**
 
@@ -310,40 +320,53 @@ endpoints as Vite middleware. The browser never sees the key.
 **Architecture:**
 
 ```
-Browser  ──POST /api/ai-analysts────▶  Vite dev server middleware
-         ──POST /api/robin-summary──▶  (server/aiPlugin.ts)
-         ──POST /api/follow-up──────▶          │
-                                               ▼
-                                         OpenAI API
-                                       (Authorization
-                                         header added
-                                       server-side from
-                                       process.env)
+                            ┌─ vite dev ──▶ server/aiPlugin.ts  (Vite middleware)
+Browser  ─POST /api/* ─────▶┤
+                            └─ vercel    ──▶ api/*.ts            (Vercel Functions)
+                                                   │
+                                                   ▼
+                                         server/aiHandlers.ts
+                                          (shared handlers,
+                                           prompts, validators)
+                                                   │
+                                                   ▼
+                                              OpenAI API
+                                       (Authorization header added
+                                        server-side from env vars;
+                                        browser never sees the key)
 ```
 
-- The proxy is only registered by Vite's `configureServer`, so it runs in
-  `vite dev` only. `vite build` strips it; no server code ships to clients.
-- Default model: `gpt-4o-mini`. Override via `OPENAI_MODEL=...` in `.env`.
-- 12-second timeout per request, then the client falls back to deterministic.
-- The server validates that every `recommendedImpactIds` value the LLM
-  returns is actually in the hand it was given — defends against
-  hallucinated card IDs.
-- Both effects (`fetchRobinSummary`, `fetchFollowUpQuestion`) in
-  `RiskRobinGame.tsx` use the *upgrade* pattern: the template is on screen
-  immediately, the LLM result replaces it when ready. Players are never
+- Default model: `gpt-4o-mini`. Override via `OPENAI_MODEL=...` in `.env` (dev)
+  or in the Vercel Environment Variables UI (prod).
+- 12-second timeout per OpenAI request, then the browser client falls back to
+  deterministic. Each Vercel Function additionally caps wall-clock at 30s
+  (`vercel.json`'s `functions.maxDuration`) so the worst-case is bounded.
+- The handlers validate model output (e.g. every `recommendedImpactIds` value
+  must be a card id from the hand the request supplied) before responding —
+  defends against hallucinated IDs and shape drift.
+- Effects in `RiskRobinGame.tsx` use the *upgrade* pattern: the template is on
+  screen immediately, the LLM result replaces it when ready. Players are never
   blocked by the network.
 
 **Cost reference:** With `gpt-4o-mini`, a full 6-round game is ~$0.005 —
 well under a cent. A free-tier OpenAI account covers hundreds of plays.
 
-**Deploying the game publicly:**
+**Deploying to Vercel:**
 
-The Vite plugin is **dev-only by design**. If you want to ship this with
-LLM behaviour intact, build the same three endpoints as a real backend —
-e.g. a Vercel serverless function, a Cloudflare Worker, or a tiny Node
-service — keeping the contracts in `server/aiPlugin.ts` identical. The
-client (`src/game/aiClient.ts`) needs no changes. Then deploy
-`dist/` (from `vite build`) behind it.
+The Vercel Functions in `api/*.ts` are the production counterpart to the dev
+plugin. To get LLM behaviour live in production:
+
+1. Import the repo into a Vercel project (auto-detects Vite framework preset).
+2. In **Project → Settings → Environment Variables**, add:
+   - `OPENAI_API_KEY` = your `sk-...` key (Production + Preview at minimum).
+   - `OPENAI_MODEL` (optional) = override the default `gpt-4o-mini`.
+3. **Redeploy** — env-var changes only take effect on the next build.
+
+`vercel.json` already pins the framework to `vite` and sets a 30s
+`maxDuration` for every function. No other config required.
+
+The client (`src/game/aiClient.ts`) hits the same `/api/*` paths in both
+environments, so nothing in the front-end changes between dev and prod.
 
 **Turning the LLM off without removing the key:**
 
