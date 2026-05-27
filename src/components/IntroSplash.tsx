@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type Props = {
   onEnter: () => void;
@@ -20,14 +20,19 @@ type Props = {
 export default function IntroSplash({ onEnter, exiting = false }: Props) {
   const [ready, setReady] = useState(false);
   const [night, setNight] = useState(false);
+  const [xmas, setXmas] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 2200);
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
     const nightTimer = window.setTimeout(() => {
-      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        setNight(true);
-      }
+      if (!reduced) setNight(true);
     }, 10000);
+    const xmasTimer = window.setTimeout(() => {
+      if (!reduced) setXmas(true);
+    }, 20000);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -40,6 +45,7 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
     return () => {
       clearTimeout(t);
       clearTimeout(nightTimer);
+      clearTimeout(xmasTimer);
       window.removeEventListener("keydown", onKey);
     };
   }, [ready, onEnter]);
@@ -47,8 +53,8 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
   return (
     <div
       className={`rr-splash ${night ? "rr-splash-night" : ""} ${
-        exiting ? "rr-splash-exit" : ""
-      }`}
+        xmas ? "rr-splash-xmas" : ""
+      } ${exiting ? "rr-splash-exit" : ""}`}
       role="dialog"
       aria-label="Risk Robin"
       onClick={() => {
@@ -58,7 +64,9 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
       <style>{splashCss}</style>
 
       <div className="rr-splash-sky" aria-hidden="true" />
+      <div className="rr-xmas-sky" aria-hidden="true" />
       <NightEasterEgg />
+      <ChristmasEasterEgg />
 
       {/* Drifting clouds */}
       <div className="rr-cloud rr-cloud-1" aria-hidden="true" />
@@ -216,6 +224,235 @@ function NightEasterEgg() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+/* Christmas easter egg — appears 10s after the night easter egg.            */
+/* ------------------------------------------------------------------------ */
+
+function ChristmasEasterEgg() {
+  // Deterministic snow distribution so the flakes don't reshuffle on every
+  // re-render. A tiny LCG keeps the pattern stable but uniformly scattered.
+  const flakes = useMemo(() => {
+    let s = 0x1f3b7c19;
+    const rand = () => {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      return s / 0xffffffff;
+    };
+    return Array.from({ length: 80 }, () => ({
+      x: rand() * 100,
+      delay: rand() * 9,
+      dur: 9 + rand() * 8,
+      size: 0.45 + rand() * 1.1,
+      sway: -40 + rand() * 80,
+      opacity: 0.55 + rand() * 0.4,
+    }));
+  }, []);
+
+  const cabinColors = ["#D92B2B", "#1f5e3a", "#FFC940", "#ffffff"];
+
+  return (
+    <div className="rr-xmas-scene" aria-hidden="true">
+      <div className="rr-snow">
+        {flakes.map((f, i) => (
+          <span
+            key={`flake-${i}`}
+            style={
+              {
+                left: `${f.x}%`,
+                animationDelay: `${f.delay}s`,
+                animationDuration: `${f.dur}s`,
+                opacity: f.opacity,
+                "--flake-size": f.size,
+                "--flake-sway": `${f.sway}px`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      <svg
+        className="rr-xmas-svg"
+        viewBox="0 0 1600 520"
+        preserveAspectRatio="xMidYEnd meet"
+        aria-hidden="true"
+      >
+        {/* Christmas market — a row of cosy stalls beneath the wheel */}
+        <g className="rr-xmas-market">
+          {[
+            { x: 1180, canopy: "#D92B2B" },
+            { x: 1250, canopy: "#1f5e3a" },
+            { x: 1320, canopy: "#FFC940" },
+          ].map((stall, i) => (
+            <g key={`stall-${i}`} transform={`translate(${stall.x}, 460)`}>
+              {/* stall body */}
+              <rect
+                x="-26"
+                y="-30"
+                width="52"
+                height="26"
+                fill="#5b3a1f"
+                rx="2"
+              />
+              {/* gabled striped canopy */}
+              <polygon
+                points="-32,-30 32,-30 26,-44 -26,-44"
+                fill={stall.canopy}
+              />
+              <line
+                x1="-30"
+                y1="-37"
+                x2="30"
+                y2="-37"
+                stroke="#fff"
+                strokeWidth="1.6"
+                opacity="0.55"
+              />
+              {/* counter */}
+              <rect
+                x="-26"
+                y="-4"
+                width="52"
+                height="4"
+                fill="#7a5d44"
+                rx="1"
+              />
+              {/* tiny fairy lights along the canopy edge */}
+              {[-22, -10, 2, 14].map((lx, li) => (
+                <circle
+                  key={`l-${i}-${li}`}
+                  cx={lx}
+                  cy={-30}
+                  r="1.2"
+                  fill="#ffe080"
+                  className="rr-xmas-light"
+                  style={{ animationDelay: `${li * 0.25 + i * 0.3}s` }}
+                />
+              ))}
+            </g>
+          ))}
+
+          {/* a little snow caked on the canopies */}
+          <rect x="1156" y="-45" width="0" height="0" />
+        </g>
+
+        {/* Large Ferris wheel anchored to the right side. The supports
+            stay still while the wheel spins around its hub. */}
+        <g className="rr-xmas-wheel" transform="translate(1430, 250)">
+          {/* support legs + base */}
+          <line
+            x1="-90"
+            y1="220"
+            x2="0"
+            y2="-2"
+            stroke="#3a3a4a"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+          <line
+            x1="90"
+            y1="220"
+            x2="0"
+            y2="-2"
+            stroke="#3a3a4a"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+          <rect
+            x="-105"
+            y="220"
+            width="210"
+            height="6"
+            fill="#2a2a3a"
+            rx="3"
+          />
+
+          {/* rotating wheel */}
+          <g className="rr-xmas-wheel-spin">
+            {/* outer rim */}
+            <circle
+              cx="0"
+              cy="0"
+              r="130"
+              fill="none"
+              stroke="#f1f4ff"
+              strokeWidth="2.4"
+              opacity="0.6"
+            />
+            <circle
+              cx="0"
+              cy="0"
+              r="126"
+              fill="none"
+              stroke="#FFC940"
+              strokeWidth="1.4"
+              opacity="0.7"
+            />
+
+            {/* spokes + cabins around the rim */}
+            {Array.from({ length: 12 }).map((_, i) => {
+              const angle = (i * 360) / 12;
+              const rad = (angle * Math.PI) / 180;
+              const x = Math.cos(rad) * 128;
+              const y = Math.sin(rad) * 128;
+              const color = cabinColors[i % cabinColors.length];
+              return (
+                <g key={`cab-${i}`}>
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2={x}
+                    y2={y}
+                    stroke="#f1f4ff"
+                    strokeWidth="1.5"
+                    opacity="0.55"
+                  />
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="11"
+                    fill={color}
+                    stroke="#3a3a4a"
+                    strokeWidth="1.2"
+                  />
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="4"
+                    fill="#fff"
+                    opacity="0.65"
+                  />
+                </g>
+              );
+            })}
+
+            {/* rim fairy lights between the cabins */}
+            {Array.from({ length: 24 }).map((_, i) => {
+              const angle = i * (360 / 24) + 7.5;
+              const rad = (angle * Math.PI) / 180;
+              const x = Math.cos(rad) * 130;
+              const y = Math.sin(rad) * 130;
+              return (
+                <circle
+                  key={`bulb-${i}`}
+                  cx={x}
+                  cy={y}
+                  r="1.6"
+                  fill="#ffe080"
+                  className="rr-xmas-light"
+                  style={{ animationDelay: `${(i % 6) * 0.12}s` }}
+                />
+              );
+            })}
+
+            {/* hub */}
+            <circle cx="0" cy="0" r="12" fill="#3a3a4a" />
+            <circle cx="0" cy="0" r="6" fill="#FFC940" />
+          </g>
+        </g>
+      </svg>
     </div>
   );
 }
@@ -642,6 +879,111 @@ const splashCss = `
 /* Tram windows glow warm at night (interior lights). */
 .rr-splash-night .rr-skyline rect[fill="#d5e5f0"] {
   fill: #ffe39c;
+}
+
+/* ---- Christmas easter egg (kicks in 20s after splash starts) ---- */
+.rr-xmas-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 3s ease-in-out;
+}
+.rr-splash-xmas .rr-xmas-scene {
+  opacity: 1;
+}
+
+.rr-xmas-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(700px 260px at 50% 78%, rgba(220, 235, 255, 0.22), transparent 72%),
+    linear-gradient(180deg, #0a1430 0%, #1f3a64 48%, #6390b6 100%);
+  opacity: 0;
+  transition: opacity 3.5s ease-in-out;
+  pointer-events: none;
+}
+.rr-splash-xmas .rr-xmas-sky {
+  opacity: 0.92;
+}
+
+/* Snowfall — flakes drift from above the viewport down past the bottom. */
+.rr-snow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.rr-snow span {
+  position: absolute;
+  top: -30px;
+  width: calc(5px * var(--flake-size));
+  height: calc(5px * var(--flake-size));
+  border-radius: 999px;
+  background: #f3faff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  animation-name: rrSnowFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: paused;
+}
+.rr-splash-xmas .rr-snow span {
+  animation-play-state: running;
+}
+@keyframes rrSnowFall {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  10%  { opacity: 0.95; }
+  100% { transform: translate(var(--flake-sway, 20px), 110vh); opacity: 0.95; }
+}
+
+/* Christmas overlay SVG sits on top of the daytime skyline. */
+.rr-xmas-svg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 56%;
+  max-height: 520px;
+}
+
+/* Wheel rotates around its local origin (the hub sits at the parent g's
+   translate point, which is 0,0 in the inner group's coordinate space). */
+.rr-xmas-wheel-spin {
+  transform-origin: 0px 0px;
+  animation: rrWheelSpin 22s linear infinite paused;
+}
+.rr-splash-xmas .rr-xmas-wheel-spin {
+  animation-play-state: running;
+}
+@keyframes rrWheelSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Fairy lights twinkle. */
+.rr-xmas-light {
+  opacity: 0.4;
+}
+.rr-splash-xmas .rr-xmas-light {
+  animation: rrXmasTwinkle 1.6s ease-in-out infinite;
+}
+@keyframes rrXmasTwinkle {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+/* Once the Christmas scene takes over, hush the fireworks and the warm
+   sunset tones — winter night is colder and quieter. */
+.rr-splash-xmas .rr-fireworks {
+  opacity: 0.18;
+  transition: opacity 3s ease-in-out;
+}
+.rr-splash-xmas .rr-night-sky {
+  opacity: 0;
+  transition: opacity 3s ease-in-out;
 }
 
 /* Tram headlight — hidden in day, fades in with a brief flicker at night. */
