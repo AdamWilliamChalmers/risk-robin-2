@@ -561,11 +561,11 @@ const splashCss = `
 }
 
 .rr-tram {
-  animation: rrTram 9s 1.2s ease-in-out infinite;
+  animation: rrTram 14s 1.2s linear infinite;
 }
 @keyframes rrTram {
-  0%   { transform: translate(1080px, 446px); }
-  100% { transform: translate(420px, 446px); }
+  0%   { transform: translate(1700px, 446px); }
+  100% { transform: translate(-220px, 446px); }
 }
 
 @keyframes rrSplashIn {
