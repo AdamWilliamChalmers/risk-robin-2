@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 type Props = {
   onEnter: () => void;
@@ -19,9 +19,15 @@ type Props = {
  */
 export default function IntroSplash({ onEnter, exiting = false }: Props) {
   const [ready, setReady] = useState(false);
+  const [night, setNight] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 2200);
+    const nightTimer = window.setTimeout(() => {
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setNight(true);
+      }
+    }, 10000);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -33,13 +39,16 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
     window.addEventListener("keydown", onKey);
     return () => {
       clearTimeout(t);
+      clearTimeout(nightTimer);
       window.removeEventListener("keydown", onKey);
     };
   }, [ready, onEnter]);
 
   return (
     <div
-      className={`rr-splash ${exiting ? "rr-splash-exit" : ""}`}
+      className={`rr-splash ${night ? "rr-splash-night" : ""} ${
+        exiting ? "rr-splash-exit" : ""
+      }`}
       role="dialog"
       aria-label="Risk Robin"
       onClick={() => {
@@ -49,6 +58,7 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
       <style>{splashCss}</style>
 
       <div className="rr-splash-sky" aria-hidden="true" />
+      <NightEasterEgg />
 
       {/* Drifting clouds */}
       <div className="rr-cloud rr-cloud-1" aria-hidden="true" />
@@ -117,6 +127,94 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
             <span className="rr-enter-arrow" aria-hidden="true">→</span>
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function NightEasterEgg() {
+  return (
+    <div className="rr-night-scene" aria-hidden="true">
+      <div className="rr-night-sky" />
+      <div className="rr-moon" />
+      <div className="rr-stars">
+        {[
+          [12, 18, 0.1],
+          [20, 9, 0.8],
+          [28, 25, 1.4],
+          [37, 13, 0.4],
+          [45, 22, 1.1],
+          [55, 10, 0.2],
+          [63, 18, 1.7],
+          [72, 8, 0.9],
+          [82, 24, 1.3],
+          [91, 14, 0.6],
+          [16, 32, 1.8],
+          [68, 31, 0.5],
+        ].map(([x, y, delay], i) => (
+          <span
+            key={`star-${i}`}
+            style={
+              {
+                "--star-x": `${x}%`,
+                "--star-y": `${y}%`,
+                "--star-delay": `${delay}s`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+      <div className="rr-fireworks">
+        {(
+          [
+            { x: "18%", y: "26%", color: "#ffcf66", tip: "#fff6b3", delay: "0s",   size: 1.0 },
+            { x: "34%", y: "16%", color: "#ff8fcb", tip: "#ffdcef", delay: "0.6s", size: 0.75 },
+            { x: "50%", y: "32%", color: "#82d7ff", tip: "#c6ecff", delay: "1.3s", size: 1.2 },
+            { x: "66%", y: "20%", color: "#a8ff82", tip: "#dcffcd", delay: "2.0s", size: 0.85 },
+            { x: "82%", y: "28%", color: "#ffaf6b", tip: "#ffd9b0", delay: "2.7s", size: 1.05 },
+            { x: "26%", y: "10%", color: "#ffffff", tip: "#dceeff", delay: "3.3s", size: 0.6 },
+            { x: "60%", y: "10%", color: "#c08fff", tip: "#e5d3ff", delay: "4.0s", size: 1.1 },
+            { x: "88%", y: "14%", color: "#ffcad9", tip: "#ffffff", delay: "4.6s", size: 0.7 },
+          ] as const
+        ).map((burst, idx) => (
+          <div
+            key={`fw-${idx}`}
+            className="rr-firework"
+            style={
+              {
+                "--fw-x": burst.x,
+                "--fw-y": burst.y,
+                "--fw-color": burst.color,
+                "--fw-color-tip": burst.tip,
+                "--fw-delay": burst.delay,
+                "--fw-size": burst.size,
+              } as CSSProperties
+            }
+          >
+            <span className="rr-firework-flash" />
+            {Array.from({ length: 18 }).map((_, i) => (
+              <span
+                key={`o-${i}`}
+                className="rr-spark rr-spark-outer"
+                style={{ "--spark-angle": `${i * (360 / 18)}deg` } as CSSProperties}
+              />
+            ))}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <span
+                key={`m-${i}`}
+                className="rr-spark rr-spark-mid"
+                style={{ "--spark-angle": `${i * (360 / 12) + 15}deg` } as CSSProperties}
+              />
+            ))}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span
+                key={`in-${i}`}
+                className="rr-spark rr-spark-inner"
+                style={{ "--spark-angle": `${i * (360 / 8) + 22}deg` } as CSSProperties}
+              />
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -431,6 +529,7 @@ const splashCss = `
 .rr-splash-sky {
   position: absolute;
   inset: 0;
+  z-index: 0;
   background:
     radial-gradient(900px 500px at 18% -10%, #FCE9D6 0%, transparent 60%),
     radial-gradient(900px 500px at 110% 10%, #E4D9EE 0%, transparent 55%),
@@ -438,9 +537,200 @@ const splashCss = `
   animation: rrSkyIn 0.6s ease-out both;
 }
 
+/* ---- 10-second Easter egg: dusk + fireworks ---- */
+.rr-night-scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.rr-night-sky {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(700px 240px at 50% 70%, rgba(245, 117, 62, 0.34), transparent 72%),
+    radial-gradient(900px 460px at 20% 95%, rgba(255, 177, 88, 0.22), transparent 62%),
+    linear-gradient(180deg, #171d46 0%, #293165 46%, #7a5a6c 74%, #c17855 100%);
+  transition: opacity 3.2s ease-in-out;
+}
+
+.rr-splash-night .rr-night-sky {
+  opacity: 1;
+}
+
+.rr-moon {
+  position: absolute;
+  top: 9%;
+  right: 13%;
+  width: clamp(34px, 5vw, 58px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: #fff6cf;
+  box-shadow: 0 0 26px rgba(255, 246, 207, 0.45);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 2.2s ease 1s, transform 2.2s ease 1s;
+}
+
+.rr-splash-night .rr-moon {
+  opacity: 0.95;
+  transform: translateY(0);
+}
+
+.rr-stars span {
+  position: absolute;
+  left: var(--star-x);
+  top: var(--star-y);
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
+  opacity: 0;
+}
+
+.rr-splash-night .rr-stars span {
+  animation: rrStarTwinkle 3.4s var(--star-delay) ease-in-out infinite;
+}
+
+@keyframes rrStarTwinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50%      { opacity: 0.95; transform: scale(1.2); }
+}
+
+.rr-splash-night .rr-skyline {
+  filter: brightness(0.58) saturate(0.84);
+  transition: filter 3.2s ease-in-out;
+}
+
+.rr-splash-night .rr-skyline rect[fill="#3b5566"],
+.rr-splash-night .rr-skyline rect[fill="#2a3a4a"] {
+  fill: #ffd36b;
+  opacity: 0.95;
+}
+
+/* Each firework has a central flash + three rings of streak sparks (outer,
+   mid, inner) so the burst reads as a real firework rather than a ring of
+   dots. The cycle is long enough that with 8 bursts at staggered delays
+   there is almost always something popping in the sky. */
+.rr-firework {
+  position: absolute;
+  left: var(--fw-x);
+  top: var(--fw-y);
+  width: 0;
+  height: 0;
+  --fw-size: 1;
+}
+
+.rr-firework-flash {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(54px * var(--fw-size));
+  height: calc(54px * var(--fw-size));
+  margin-left: calc(-27px * var(--fw-size));
+  margin-top: calc(-27px * var(--fw-size));
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    var(--fw-color-tip) 0%,
+    var(--fw-color) 30%,
+    transparent 70%
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rr-spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    to top,
+    transparent 0%,
+    var(--fw-color) 55%,
+    var(--fw-color-tip) 100%
+  );
+  box-shadow: 0 0 6px var(--fw-color);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rr-spark-outer {
+  --reach: calc(110px * var(--fw-size));
+  width: calc(3px * var(--fw-size));
+  height: calc(18px * var(--fw-size));
+  margin-left: calc(-1.5px * var(--fw-size));
+  margin-top: calc(-9px * var(--fw-size));
+  transform-origin: 50% 50%;
+}
+
+.rr-spark-mid {
+  --reach: calc(72px * var(--fw-size));
+  width: calc(2.4px * var(--fw-size));
+  height: calc(13px * var(--fw-size));
+  margin-left: calc(-1.2px * var(--fw-size));
+  margin-top: calc(-6.5px * var(--fw-size));
+}
+
+.rr-spark-inner {
+  --reach: calc(38px * var(--fw-size));
+  width: calc(2px * var(--fw-size));
+  height: calc(8px * var(--fw-size));
+  margin-left: calc(-1px * var(--fw-size));
+  margin-top: calc(-4px * var(--fw-size));
+}
+
+.rr-splash-night .rr-firework-flash {
+  animation: rrFireFlash 6s var(--fw-delay) ease-out infinite;
+}
+
+.rr-splash-night .rr-spark {
+  animation: rrFireSpark 6s var(--fw-delay) cubic-bezier(.22,.7,.18,1) infinite;
+}
+
+@keyframes rrFireFlash {
+  0%   { opacity: 0; transform: scale(0.2); }
+  3%   { opacity: 1; transform: scale(1.05); }
+  9%   { opacity: 0.4; transform: scale(1.4); }
+  16%  { opacity: 0; transform: scale(1.5); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes rrFireSpark {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle)) translateY(0) scaleY(0.3);
+  }
+  3% {
+    opacity: 1;
+    transform: rotate(var(--spark-angle)) translateY(calc(-1 * var(--reach) * 0.18)) scaleY(0.9);
+  }
+  10% {
+    opacity: 1;
+    transform: rotate(var(--spark-angle)) translateY(calc(-1 * var(--reach) * 0.6)) scaleY(1);
+  }
+  20% {
+    opacity: 0.75;
+    transform: rotate(var(--spark-angle)) translateY(calc(-1 * var(--reach) * 0.9)) scaleY(0.75);
+  }
+  30% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle)) translateY(calc(-1 * var(--reach))) scaleY(0.45);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle)) translateY(calc(-1 * var(--reach))) scaleY(0.45);
+  }
+}
+
 /* ---- Clouds ---- */
 .rr-cloud {
   position: absolute;
+  z-index: 3;
   background: #fff;
   border-radius: 999px;
   filter: drop-shadow(0 4px 8px rgba(80, 60, 40, 0.08));
@@ -486,6 +776,7 @@ const splashCss = `
 /* ---- Plane + dashed contrail ---- */
 .rr-plane-track {
   position: absolute;
+  z-index: 4;
   top: 14%;
   left: -20%;
   width: 60%;
@@ -516,6 +807,7 @@ const splashCss = `
 /* ---- Skyline ---- */
 .rr-skyline {
   position: absolute;
+  z-index: 2;
   left: 0;
   right: 0;
   bottom: 0;
