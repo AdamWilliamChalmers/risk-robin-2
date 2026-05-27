@@ -12,296 +12,601 @@ export type ImpactCard = {
   image?: string;
 };
 
-// TODO: drop additional extracted impact PNGs into /public and reference them
-// here. Only I1 has art at the moment; the rest render as styled HTML cards.
+/**
+ * The full deck of 73 Impact cards from the printed Risk Robin Sustainable
+ * Tourism game. Titles, descriptions and icons are transcribed straight from
+ * the PDF so the digital cards match the physical version one-for-one.
+ *
+ * IDs are kept stable as "I1"…"I73" – the on-card number shown to players is
+ * the trailing digits (the leading "I" is stripped at render time).
+ */
 export const IMPACT_CARDS: ImpactCard[] = [
-  // ---------- POSITIVE ----------
   {
     id: "I1",
     title: "Vibrant atmosphere & cultural pride",
     description:
-      "Residents enjoy a vibrant atmosphere that comes with the event and feel cultural pride for the city.",
+      "Residents enjoy vibrant atmosphere that comes with the event and feel cultural pride for the city",
     icons: ["better_quality_of_life_residents"],
     tone: "positive",
     image: "impact_1.png",
   },
   {
     id: "I2",
-    title: "Civic pride & global visibility",
+    title: "Civic pride & visibility for Edinburgh",
     description:
-      "Edinburgh's profile rises internationally, which residents and businesses can feel proud of.",
-    icons: ["better_quality_of_life_residents", "thriving_visitor_economy"],
+      "Residents feel like proud citizens of Edinburgh and enjoy its visibility internationally",
+    icons: ["better_quality_of_life_residents"],
     tone: "positive",
   },
   {
     id: "I3",
-    title: "Short-term boost for local businesses",
+    title: "Enjoyable festive atmosphere & activities",
     description:
-      "Cafés, restaurants, shops, taxis, and hotels see a concentrated rise in spending.",
-    icons: ["thriving_visitor_economy", "fair_work_more_better_jobs"],
+      "Residents feel nice festive atmosphere and enjoy the activities that come with it",
+    icons: ["better_quality_of_life_residents"],
     tone: "positive",
   },
   {
     id: "I4",
-    title: "Boost for casual and seasonal jobs",
+    title: "Positive shared experiences & civic buzz",
     description:
-      "Hospitality, stewarding, and event roles open up during peak periods.",
-    icons: ["fair_work_more_better_jobs"],
+      "Residents have a feeling of shared experience and enjoy civic buzz",
+    icons: ["better_quality_of_life_residents"],
     tone: "positive",
   },
   {
     id: "I5",
-    title: "Increased income for pubs, hotels & taxis",
+    title: "Reduced sense of civic pride",
+    description: "Residents lose sense of civic pride",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I6",
+    title: "Short-term boost for local businesses",
     description:
-      "Late-night, transport, and hospitality sectors see clear short-term revenue.",
+      "Short-term boost for local businesses and small traders",
     icons: ["thriving_visitor_economy", "fair_work_more_better_jobs"],
     tone: "positive",
   },
   {
-    id: "I6",
-    title: "Improved amenities",
-    description:
-      "Investment driven by visitor demand can leave behind better public-facing facilities.",
-    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
-    tone: "positive",
-  },
-  {
     id: "I7",
-    title: "More dining options & vibrant streets",
-    description:
-      "Year-round venues add variety to neighbourhoods that residents can also use.",
-    icons: ["thriving_visitor_economy", "better_quality_of_life_residents"],
+    title: "Boost for casual jobs",
+    description: "Boost for casual jobs and temporary workers",
+    icons: ["thriving_visitor_economy", "fair_work_more_better_jobs"],
     tone: "positive",
   },
   {
     id: "I8",
-    title: "Community clean-up initiatives",
+    title: "Short-term boost in hospitality income",
     description:
-      "Local groups, councils, and businesses coordinate to keep streets and green spaces in good shape.",
-    icons: ["toward_net_zero", "better_quality_of_life_residents"],
+      "Hospitality industry experiences a short-term boost of income due to an event",
+    icons: ["thriving_visitor_economy"],
     tone: "positive",
   },
   {
     id: "I9",
-    title: "Investment in transport links",
+    title: "Seasonal retail & food opportunities",
     description:
-      "Pressure from visitor traffic accelerates upgrades to stations, routes, and pedestrian areas.",
-    icons: ["ongoing_investment_city", "toward_net_zero"],
+      "Retail and food industries see more opportunities in tourism peak season",
+    icons: ["thriving_visitor_economy"],
     tone: "positive",
   },
-
-  // ---------- NEGATIVE ----------
   {
     id: "I10",
-    title: "Late-night noise",
+    title: "Increased income for pubs, hotels, taxis",
     description:
-      "Extended nightlife and street activity disturb sleep and the feel of a neighbourhood.",
-    icons: ["better_quality_of_life_residents"],
-    tone: "negative",
+      "Pubs, hotels and taxis see higher income with more visitors coming",
+    icons: ["thriving_visitor_economy"],
+    tone: "positive",
   },
   {
     id: "I11",
-    title: "Daytime noise",
+    title: "Higher spending in local shops & attractions",
     description:
-      "Buskers, tour groups, and crowds raise constant background sound in busy areas.",
-    icons: ["better_quality_of_life_residents"],
-    tone: "negative",
+      "Visitors spend more in local shops, cafes and attractions",
+    icons: ["thriving_visitor_economy"],
+    tone: "positive",
   },
   {
     id: "I12",
-    title: "Heavy pedestrian congestion",
+    title: "Transport jobs & business for local guides",
     description:
-      "Pavements and squares become difficult to navigate for residents going about everyday life.",
-    icons: ["better_quality_of_life_residents", "ongoing_investment_city"],
-    tone: "negative",
+      "New tourist tours and activities create more transport jobs and business for local guides",
+    icons: ["thriving_visitor_economy", "fair_work_more_better_jobs"],
+    tone: "positive",
   },
   {
     id: "I13",
-    title: "Crowded public transport",
+    title: "Increased local business exposure",
     description:
-      "Buses, trams, and trains fill up, making local journeys slower and less reliable.",
-    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
-    tone: "negative",
+      "Visitors increase local business exposure (e.g., through Instagram)",
+    icons: ["thriving_visitor_economy"],
+    tone: "positive",
   },
   {
     id: "I14",
-    title: "Loss of long-term rental housing",
+    title: "Steadier income for tourism businesses",
     description:
-      "Flats shift to short-term lets, reducing what is available for residents to rent.",
-    icons: ["better_quality_of_life_residents", "ongoing_investment_city"],
-    tone: "negative",
+      "Off-peak tourism creates steadier income for tourism businesses and more consistent employment opportunities",
+    icons: ["thriving_visitor_economy"],
+    tone: "positive",
   },
   {
     id: "I15",
-    title: "Reduced privacy & tranquillity",
+    title: "Job creation",
     description:
-      "Tour groups, photographs, and crowds reach into residential streets and quiet corners.",
-    icons: ["better_quality_of_life_residents"],
-    tone: "negative",
+      "New jobs are being created with the growth in tourism sector",
+    icons: ["fair_work_more_better_jobs"],
+    tone: "positive",
   },
   {
     id: "I16",
-    title: "Environmental damage",
+    title: "Boost for indoor businesses",
     description:
-      "Wear on green spaces, pollution, and disturbance reduce environmental quality.",
-    icons: ["toward_net_zero", "better_quality_of_life_residents"],
-    tone: "negative",
+      "A temporary influx of visitors indoors boosts indoor businesses",
+    icons: ["thriving_visitor_economy"],
+    tone: "positive",
   },
   {
     id: "I17",
-    title: "Increased litter",
+    title: "Economic vitality for tourism sector",
     description:
-      "More waste in streets, parks, and viewpoints, with extra pressure on bins and cleaning crews.",
-    icons: ["toward_net_zero", "ongoing_investment_city"],
-    tone: "negative",
+      "Growing popularity of Edinburgh as a tourist destination improves economic vitality for tourism sector",
+    icons: ["thriving_visitor_economy"],
+    tone: "positive",
   },
   {
     id: "I18",
-    title: "Rising cost of living",
+    title: "Outdoor events & attractions see reduced activity",
     description:
-      "Pressure from visitor spending feeds into prices residents pay day-to-day.",
-    icons: ["better_quality_of_life_residents", "thriving_visitor_economy"],
+      "A temporary drop in visitor numbers leads to reduced participation in outdoor events and attractions",
+    icons: ["thriving_visitor_economy"],
     tone: "negative",
   },
   {
     id: "I19",
-    title: "Difficult for locals to use green spaces",
+    title: "Increased litter",
     description:
-      "Parks become so busy that residents lose their everyday access to them.",
+      "Increased litter and overflowing bins in specific areas",
     icons: ["better_quality_of_life_residents", "toward_net_zero"],
     tone: "negative",
   },
   {
     id: "I20",
-    title: "Air quality and emissions pressure",
+    title: "Clean-up issues",
     description:
-      "Coach idling, taxis, and concentrated traffic raise local air-quality concerns.",
-    icons: ["toward_net_zero", "ongoing_investment_city"],
+      "Issues with arranging and completing clean-up after a major event or festival on time",
+    icons: ["better_quality_of_life_residents", "toward_net_zero"],
     tone: "negative",
   },
   {
     id: "I21",
-    title: "Strain on council services",
+    title: "Air pollution spikes",
     description:
-      "Waste, cleansing, stewarding, and maintenance must stretch to cover peak demand.",
-    icons: ["ongoing_investment_city", "toward_net_zero"],
+      "Influx of visitors, e.g., tourist coaches, creates a temporary spike in air pollution",
+    icons: ["better_quality_of_life_residents", "toward_net_zero"],
     tone: "negative",
   },
   {
     id: "I22",
-    title: "Antisocial behaviour at night",
+    title: "Community clean-up initiatives",
     description:
-      "Late drinking and street activity raise complaints and pressure on policing.",
-    icons: ["better_quality_of_life_residents", "ongoing_investment_city"],
-    tone: "negative",
+      "There is an opportunity for community-organised clean-up initiative after the event",
+    icons: ["better_quality_of_life_residents"],
+    tone: "positive",
   },
-
-  // ---------- MIXED ----------
   {
     id: "I23",
-    title: "Rental value increase",
-    description:
-      "Owners benefit from higher rents, but renters face displacement and reduced supply.",
-    icons: ["thriving_visitor_economy", "better_quality_of_life_residents"],
-    tone: "mixed",
+    title: "Temporary odour problems",
+    description: "Increased litter creates temporary odour problems",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
   {
     id: "I24",
-    title: "Property value increase",
+    title: "Rent & Airbnb prices spike temporarily",
     description:
-      "Property prices rise, helping owners but pricing out new residents.",
-    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
-    tone: "mixed",
+      "Rent and Airbnb prices are higher than average due to a major event or festival",
+    icons: ["thriving_visitor_economy"],
+    tone: "negative",
   },
   {
     id: "I25",
-    title: "Longer opening hours",
+    title: "Crowded public transport",
     description:
-      "Late venues bring economic activity and choice, but extend noise and clean-up.",
-    icons: ["thriving_visitor_economy", "better_quality_of_life_residents"],
-    tone: "mixed",
+      "It is harder to get around for residents due to crowded public transport, creating local transport delays",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
   {
     id: "I26",
-    title: "New hotel or attraction developments",
+    title: "Residential flats converted for visitors",
     description:
-      "Developments add jobs and amenities but can crowd out other neighbourhood uses.",
-    icons: ["ongoing_investment_city", "thriving_visitor_economy", "better_quality_of_life_residents"],
-    tone: "mixed",
+      "There is an increase in residential flats converted into visitor accommodation",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
   {
     id: "I27",
-    title: "Year-round visitor presence",
+    title: "Loss of long-term rental housing",
     description:
-      "Streets and cafés stay lively all year, but residents share space with visitors constantly.",
-    icons: ["thriving_visitor_economy", "better_quality_of_life_residents"],
-    tone: "mixed",
+      "Long-term rental housing stock is reduced due to the growth of short-term lets (visitor accommodation)",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
   {
     id: "I28",
-    title: "Increased seasonal but precarious work",
+    title: "Property value increase",
     description:
-      "Peak periods create jobs that don't always offer stable hours or fair pay.",
-    icons: ["fair_work_more_better_jobs", "thriving_visitor_economy"],
+      "There is an increase in property values in areas that attract more visitors",
+    icons: ["better_quality_of_life_residents"],
     tone: "mixed",
   },
   {
     id: "I29",
-    title: "Public realm wear & re-investment cycle",
+    title: "Rental value increase",
     description:
-      "Paving, lighting, and street furniture wear out faster but get renewed sooner.",
-    icons: ["ongoing_investment_city", "toward_net_zero"],
+      "There is an increase in long-term rental values in areas that attract more tourists",
+    icons: ["better_quality_of_life_residents"],
     tone: "mixed",
   },
   {
     id: "I30",
-    title: "Cultural exchange and friction",
+    title: "Rising cost of living",
     description:
-      "Visitors bring new connections to the city, but also clashes around expectations.",
-    icons: ["better_quality_of_life_residents", "thriving_visitor_economy"],
-    tone: "mixed",
+      "When lots of visitors come, prices in shops, cafés, and housing can rise — increasing the cost of living for people who live here year-round",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
-
-  // ---------- NEUTRAL / OBSERVATIONAL ----------
   {
     id: "I31",
-    title: "Higher visibility of Edinburgh as a destination",
+    title: "Reduced mobility for residents in central areas",
     description:
-      "The city features more often in international media and travel content.",
-    icons: ["thriving_visitor_economy"],
-    tone: "neutral",
+      "It is harder to get to central area for residents due to road closures and diversions in the central areas",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
   {
     id: "I32",
-    title: "Pressure on iconic viewpoints",
+    title: "Heavy pedestrian congestion",
     description:
-      "A small number of locations carry a large share of the visitor footfall.",
-    icons: ["better_quality_of_life_residents", "toward_net_zero"],
-    tone: "neutral",
+      "Pedestrian streets are increasingly busy, especially in the city centre and narrow streets, creating crowd management pressures",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
   {
     id: "I33",
-    title: "Concentration of activity in the Old Town",
+    title: "Road closures & transport diversions",
     description:
-      "Footfall is unevenly distributed, focused on a small geographic area.",
-    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
-    tone: "neutral",
+      "Road closures and public transport diversions create inconvenience for the residents",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
   {
     id: "I34",
-    title: "Shift in retail mix",
+    title: "Public transport demand spikes",
     description:
-      "Shops oriented to visitors gradually replace those serving residents.",
-    icons: ["thriving_visitor_economy", "better_quality_of_life_residents"],
+      "Short-term influx of visitors creates spikes in demand for public transport",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I35",
+    title: "Temporary traffic issues",
+    description:
+      "It is harder to get around due to busy and slow traffic during the festive period",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I36",
+    title: "Temporary parking issues",
+    description:
+      "It is harder to park, especially in the central areas, during the festive period",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I37",
+    title: "Increased coach & taxi traffic",
+    description:
+      "There is an increase in coach and taxi traffic transporting visitors who arrive by cruise ships or tour buses",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I38",
+    title: "Overcrowding of residential lanes",
+    description:
+      "Instagram-ready streets and walking tours draw in crowds to residential lanes",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I39",
+    title: "Increased alcohol use",
+    description:
+      "High alcohol use during the festival or before/after the event",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I40",
+    title: "Antisocial behaviour around the event",
+    description:
+      "Major events are accompanied by antisocial behaviour before/after the event",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I41",
+    title: "Late-night noise",
+    description:
+      "It is increasingly noisy late at night from extended nightlife & fireworks",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I42",
+    title: "Daytime noise",
+    description: "Central areas are increasingly noisy during the day",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I43",
+    title: "Noise for nearby residents",
+    description:
+      "Noise disturbance and reduced tranquillity for nearby residents",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I44",
+    title: "Construction noise & disruption",
+    description:
+      "New development creates noise and local disruption in the area",
+    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I45",
+    title: "Difficult for locals to use green spaces",
+    description:
+      "Increased numbers of visitors going to green spaces make it difficult and less enjoyable for locals to use public parks",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I46",
+    title: "Increased wear on public areas",
+    description:
+      "Increase numbers of visitors wear out public areas",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I47",
+    title: "Barbecues in parks",
+    description:
+      "Increased numbers of barbecues in parks create disturbance for locals and can be a fire hazard",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I48",
+    title: "Environmental damage",
+    description:
+      "Increased numbers of visitors going to green spaces create risks of environmental damage",
+    icons: ["toward_net_zero", "better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I49",
+    title: "Erosion & path damage",
+    description:
+      "Increased numbers of visitors going to green spaces erode and damage footpaths",
+    icons: ["toward_net_zero", "better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I50",
+    title: "Relief for residents in outdoor areas",
+    description:
+      "An influx of visitors to indoor areas brings relief for residents outdoors",
+    icons: ["better_quality_of_life_residents"],
+    tone: "positive",
+  },
+  {
+    id: "I51",
+    title: "Loss of local character or green space",
+    description:
+      "Increased numbers of visitors lead to a loss of local character of an area of green space",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I52",
+    title: "More awareness of environmental protection needs",
+    description:
+      "Environmental damage in green spaces caused by increased visitor numbers raised awareness of the environmental protection needed",
+    icons: ["better_quality_of_life_residents"],
+    tone: "positive",
+  },
+  {
+    id: "I53",
+    title: "Queues in cafes",
+    description: "Increased numbers of visitors create queues in cafes",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I54",
+    title: "Overcrowding indoors",
+    description:
+      "An influx of visitors to indoor areas leads to overcrowding and long queues indoors",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I55",
+    title: "Reduced attendance of outdoor events",
+    description: "Outdoor events and attractions see reduced activity",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I56",
+    title: "Reduced access to amenities for locals",
+    description:
+      "Increased numbers of visitors make amenities less accessible for locals",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I57",
+    title: "Improved amenities",
+    description:
+      "Growing tourism industry prompts improvements in amenities",
+    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
+    tone: "positive",
+  },
+  {
+    id: "I58",
+    title: "Longer opening hours, especially in city centre",
+    description:
+      "With an increase in the numbers of visitors, places stay open for longer hours, especially in the city centre",
+    icons: ["better_quality_of_life_residents"],
+    tone: "mixed",
+  },
+  {
+    id: "I59",
+    title: "More dining options & vibrant streets",
+    description:
+      "With the expansion of food sector, local residents have more dining options and enjoy more vibrant streets",
+    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
+    tone: "positive",
+  },
+  {
+    id: "I60",
+    title: "Rising prices in local venues",
+    description:
+      "Increase numbers of visitors lead to increased prices in local venues",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I61",
+    title: "Crowded main attractions",
+    description:
+      "Crowded Old Town and main attractions due to higher number of visitors",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I62",
+    title: "More transient neighbours",
+    description:
+      "More transient and less cohesive neighbours and less stable communities due to increased numbers of visitors",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I63",
+    title: "Reduced privacy & tranquillity",
+    description:
+      "Locals experience less privacy and reduced tranquillity due to an influx of tourism visitors",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I64",
+    title: "New buildings replacing older community spaces",
+    description:
+      "With new developments, new buildings replace old community spaces",
+    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
+    tone: "mixed",
+  },
+  {
+    id: "I65",
+    title: "Complaints about obstruction",
+    description:
+      "Residents complain about the obstruction from increased numbers of coaches",
+    icons: ["ongoing_investment_city", "better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I66",
+    title: "Temporary eyesore",
+    description:
+      "The aftermaths of festivals (e.g., waste) creates temporary eyesore for locals",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I67",
+    title: "Erosion of \u201cauthentic\u201d neighbourhood life",
+    description:
+      "Increase numbers of visitors to a specific area lead to an erosion of \u201cauthentic\u201d neighbourhood life",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I68",
+    title: "Frustration from constant photography",
+    description:
+      "An influx of visitors into Instagram-ready areas create frustration from constant photography & footfall",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I69",
+    title: "Reduced respite for locals between busy periods",
+    description:
+      "Extending the tourism season reduces periods of peace and quiet for locals",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I70",
+    title: "Gradual \u201cnormalisation\u201d of crowds year-round",
+    description:
+      "High numbers of visitors gradually become \u201cnormalised\u201d",
+    icons: ["better_quality_of_life_residents"],
     tone: "neutral",
+  },
+  {
+    id: "I71",
+    title: "Year-round visitor presence in public spaces & cafes",
+    description:
+      "Visitors are seen in public spaces and cafes all year around",
+    icons: ["better_quality_of_life_residents"],
+    tone: "neutral",
+  },
+  {
+    id: "I72",
+    title: "Council maintenance costs rise",
+    description:
+      "The cost of maintaining public and green spaces increases for the city council",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
+  },
+  {
+    id: "I73",
+    title: "Strain on council services & maintenance",
+    description:
+      "The need to clean up the aftermaths of major events and festivals puts a strain on council services",
+    icons: ["better_quality_of_life_residents"],
+    tone: "negative",
   },
 ];
 
-/** Used by the Wild Card flow - never appears in the random deck. */
+/** Used by the Wild Card flow – never appears in the random deck. */
 export const WILDCARD_TEMPLATE: ImpactCard = {
   id: "wildcard_user_generated",
-  title: "Wild Card",
-  description: "None of these quite fit? Write your own impact.",
+  title: "Wild card",
+  description: "Other positive or negative impact you have observed or are aware of. Describe the impact below:",
   icons: [],
   tone: "neutral",
   isWildcard: true,
