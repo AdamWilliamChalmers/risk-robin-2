@@ -237,24 +237,13 @@ function EdinburghSkyline() {
         ))}
         <rect x="335" y="278" width="10" height="18" rx="2" fill="#2a3a4a" />
 
-        {/* Flagpole + flag */}
+        {/* Flagpole + Saltire on the main keep — the castle's one flag. */}
         <line x1="260" y1="158" x2="260" y2="212" stroke="#2a2218" strokeWidth="2.4" />
-        <path
-          className="rr-flag"
-          d="M260 160 L 294 166 L 288 178 L 294 190 L 260 184 Z"
-          fill="#D24B25"
-        />
-
-        {/* Saltire on the smaller flanking tower — small and discrete,
-            rises up the pole shortly after the castle settles in. */}
-        <g className="rr-saltire-pole">
-          <line x1="344" y1="214" x2="344" y2="244" stroke="#2a2218" strokeWidth="1.4" />
-          <circle cx="344" cy="213" r="1.6" fill="#2a2218" />
-          <g className="rr-saltire">
-            <rect x="345" y="214" width="18" height="11" fill="#0065BD" />
-            <line x1="345" y1="214" x2="363" y2="225" stroke="#ffffff" strokeWidth="2" />
-            <line x1="345" y1="225" x2="363" y2="214" stroke="#ffffff" strokeWidth="2" />
-          </g>
+        <circle cx="260" cy="157" r="2" fill="#2a2218" />
+        <g className="rr-flag">
+          <rect x="260" y="160" width="34" height="22" fill="#0065BD" />
+          <line x1="260" y1="160" x2="294" y2="182" stroke="#ffffff" strokeWidth="3" />
+          <line x1="260" y1="182" x2="294" y2="160" stroke="#ffffff" strokeWidth="3" />
         </g>
       </g>
 
@@ -563,26 +552,6 @@ const splashCss = `
   50%      { transform: skewX(-8deg) scaleX(0.95); }
 }
 
-/* Saltire: slides up the pole once, then sways gently in the breeze.
-   The pole sits at SVG x=344, the flag occupies y=214..225 when fully
-   raised. Starting offset of +24 user units parks it just above the
-   tower battlements so it reads as "being hoisted". */
-.rr-saltire {
-  transform: translateY(24px);
-  animation: rrSaltireRaise 1.6s 1.0s cubic-bezier(.22,.85,.3,1.05) forwards,
-             rrSaltireSway 3.2s 2.7s ease-in-out infinite;
-  transform-origin: 345px 220px;
-}
-@keyframes rrSaltireRaise {
-  0%   { transform: translateY(24px); }
-  85%  { transform: translateY(-2px); }
-  100% { transform: translateY(0); }
-}
-@keyframes rrSaltireSway {
-  0%, 100% { transform: translateY(0) skewX(0deg) scaleX(1); }
-  50%      { transform: translateY(0) skewX(-6deg) scaleX(0.96); }
-}
-
 .rr-tram {
   animation: rrTram 14s 1.2s linear infinite;
 }
@@ -725,7 +694,6 @@ const splashCss = `
   .rr-cloud,
   .rr-plane-track,
   .rr-flag,
-  .rr-saltire,
   .rr-tram,
   .rr-letter,
   .rr-enter {
