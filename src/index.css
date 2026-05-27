@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Nunito", system-ui, sans-serif;
+  color: #2b1f15;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #FCE9D6 0%, transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, #E4D9EE 0%, transparent 55%),
+    radial-gradient(900px 500px at 50% 110%, #DCEFD8 0%, transparent 55%),
+    #FFF6EC;
+  min-height: 100%;
+}
+
+h1, h2, h3, h4 {
+  font-family: "Fredoka", "Nunito", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Custom utilities */
+.card-shadow {
+  box-shadow: 0 10px 30px -10px rgba(60, 30, 10, 0.25);
+}
+
+.dimmed {
+  opacity: 0.45;
+  filter: saturate(0.7);
+  transition: opacity 250ms ease, filter 250ms ease;
+  pointer-events: none;
+}
+
+.highlighted {
+  position: relative;
+  transition: transform 250ms ease;
+}
+.highlighted::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 24px;
+  pointer-events: none;
+  border: 3px solid rgba(210, 75, 37, 0.7);
+  box-shadow: 0 0 24px rgba(210, 75, 37, 0.45);
+  animation: pulseRing 2s ease-out infinite;
+}
+
+@keyframes pulseRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(210, 75, 37, 0.35), 0 0 18px rgba(210, 75, 37, 0.4); }
+  50%      { box-shadow: 0 0 0 10px rgba(210, 75, 37, 0), 0 0 28px rgba(210, 75, 37, 0.55); }
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition-all;
+}
+.btn-primary {
+  @apply btn bg-robinOrange text-white hover:brightness-110 active:scale-[0.98] shadow-md;
+}
+.btn-ghost {
+  @apply btn bg-white/70 backdrop-blur text-stone-800 hover:bg-white;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* ---------- Print stylesheet ---------- */
+/* When the player exports the final report as PDF (via window.print), we
+   hide the rest of the page and let the printable report span the page. */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Hide everything by default in print mode, then re-show the report. */
+  body * { visibility: hidden; }
+  .printable-report,
+  .printable-report * { visibility: visible; }
+  .printable-report {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 24px;
+    background: white !important;
+    box-shadow: none !important;
+  }
+  .no-print { display: none !important; }
+  .highlighted::after { content: none !important; }
+  .dimmed { opacity: 1 !important; filter: none !important; }
+}

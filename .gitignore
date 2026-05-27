@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.log
+.vite
+*.tsbuildinfo
+
+# Local environment (OpenAI key for the dev-only AI proxy — see HANDOFF.md §5.6)
+.env
+.env.local
+.env.*.local
+
