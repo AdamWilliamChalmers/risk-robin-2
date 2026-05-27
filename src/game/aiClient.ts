@@ -10,7 +10,7 @@
  * Callers MUST treat `null` as "no upgrade — keep the deterministic value".
  * That's how the game stays playable with or without the proxy running.
  */
-import type { AISuggestion } from "./types";
+import type { AISuggestion, AIVoice, PersonaOverride } from "./types";
 import type { ContextCard } from "../data/contextCards";
 import type { ImpactCard } from "../data/impactCards";
 import type { ImpactCategory } from "../data/categories";
@@ -149,4 +149,62 @@ export async function polishText(opts: {
   if (opts.rawText.trim().length === 0) return null;
   const result = await postJson<{ polished: string }>("/api/polish-text", opts);
   return result?.polished ?? null;
+}
+
+/** Per-game persona overrides returned by /api/persona-names. */
+export type PersonaNamesMap = Record<AIVoice, PersonaOverride>;
+
+/**
+ * /api/persona-names — fetch a fresh trio of personas for this game session.
+ * Each override has a name, short name, role, location, and bio, so each
+ * session shows a varied cross-section of Edinburgh (student, musician,
+ * retired worker, unemployed parent, etc.) rather than the same three jobs.
+ *
+ * Returns null on any failure so the caller can leave the static defaults
+ * (Iona / Callum / Priya) in place.
+ */
+export async function fetchPersonaNames(): Promise<PersonaNamesMap | null> {
+  type Item = {
+    voice: AIVoice;
+    name: string;
+    shortName: string;
+    role: string;
+    location: string;
+    bio: string;
+  };
+  const result = await postJson<{ personas: Item[] }>(
+    "/api/persona-names",
+    {}
+  );
+  if (!result || !Array.isArray(result.personas)) return null;
+  const map = {} as PersonaNamesMap;
+  for (const p of result.personas) {
+    if (
+      typeof p?.voice !== "string" ||
+      typeof p.name !== "string" ||
+      typeof p.shortName !== "string" ||
+      typeof p.role !== "string" ||
+      typeof p.location !== "string" ||
+      typeof p.bio !== "string"
+    ) {
+      return null;
+    }
+    map[p.voice] = {
+      name: p.name,
+      shortName: p.shortName,
+      role: p.role,
+      location: p.location,
+      bio: p.bio,
+    };
+  }
+  // Sanity: all three voices present.
+  const VOICES: AIVoice[] = [
+    "Resident Voice",
+    "Economy Voice",
+    "Environment and City Voice",
+  ];
+  for (const v of VOICES) {
+    if (!map[v]) return null;
+  }
+  return map;
 }

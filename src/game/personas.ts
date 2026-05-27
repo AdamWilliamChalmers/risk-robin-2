@@ -1,4 +1,4 @@
-import type { AIVoice } from "./types";
+import type { AIVoice, PersonaOverride } from "./types";
 
 /**
  * Each AI voice is presented in the UI as a *named person* with an Edinburgh
@@ -71,4 +71,34 @@ export const PERSONAS: Record<AIVoice, Persona> = {
 /** Convenience accessor with a defensive fallback so the UI never breaks. */
 export function personaFor(voice: AIVoice | string): Persona | undefined {
   return PERSONAS[voice as AIVoice];
+}
+
+/**
+ * Build a persona for a voice, applying any runtime override (typically
+ * generated per-game by the LLM and stored in `GameState.personaNames`).
+ * The override can replace identity-level fields (name, role, location, bio)
+ * so each session sees a fresh cross-section of Edinburgh — student, musician,
+ * retired worker, etc. — not just a renamed teacher.
+ *
+ * The voice's *lens* (perspective, emoji, brand colour) stays fixed because
+ * it's part of the game design.
+ *
+ * Falls back to the static defaults if no override is present.
+ */
+export function personaWithOverride(
+  voice: AIVoice | string,
+  overrides: Record<AIVoice, PersonaOverride> | null | undefined
+): Persona | undefined {
+  const base = PERSONAS[voice as AIVoice];
+  if (!base) return undefined;
+  const o = overrides?.[voice as AIVoice];
+  if (!o) return base;
+  return {
+    ...base,
+    name: o.name,
+    shortName: o.shortName,
+    role: o.role,
+    location: o.location,
+    bio: o.bio,
+  };
 }

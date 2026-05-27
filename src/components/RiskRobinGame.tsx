@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../game/useGame";
 import type { Stage } from "../game/types";
-import { fetchFollowUpQuestion, fetchRobinSummary } from "../game/aiClient";
+import {
+  fetchFollowUpQuestion,
+  fetchPersonaNames,
+  fetchRobinSummary,
+} from "../game/aiClient";
+import { PersonaNamesProvider } from "../game/personaNamesContext";
 
 import WelcomeModal from "./WelcomeModal";
 import RobinGuide from "./RobinGuide";
@@ -56,6 +61,22 @@ export default function RiskRobinGame() {
     const t = setTimeout(() => g.beginRound(), 700);
     return () => clearTimeout(t);
   }, [s.stage, s.roundNumber, tourOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Once per game, ask the LLM for a fresh trio of persona names so each
+  // session has different characters (Iona/Callum/Priya remain the defaults
+  // if the call fails or no API key is configured).
+  useEffect(() => {
+    if (!s.gameStarted || s.personaNames) return;
+    let cancelled = false;
+    (async () => {
+      const names = await fetchPersonaNames();
+      if (cancelled || !names) return;
+      g.setPersonaNames(names);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [s.gameStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // reveal_context → ai_discussion (async: provider may be remote)
   useEffect(() => {
@@ -145,6 +166,7 @@ export default function RiskRobinGame() {
   const rootPadding = showDocks ? "pb-52" : "pb-12";
 
   return (
+    <PersonaNamesProvider overrides={s.personaNames}>
     <div className={`min-h-screen ${rootPadding}`}>
       {s.stage === "welcome" && (
         <WelcomeModal onStart={g.startGame} onStartWithTour={startGameWithTour} />
@@ -213,8 +235,10 @@ export default function RiskRobinGame() {
           s.gameStarted && (
             <>
               {/* Top row: context card on the left (larger), progress board
-                  on the right. Stacks vertically on small screens. */}
-              <div className="flex flex-col lg:flex-row gap-6 items-start">
+                  on the right. `items-stretch` makes the two panels share
+                  the row's height; the ContextCard expands to match the
+                  Impact Assessment board next to it. */}
+              <div className="flex flex-col lg:flex-row gap-6 items-stretch">
                 {(s.currentContext || s.stage === "round_intro") && (
                   <div
                     className={`flex justify-center w-full lg:w-auto lg:shrink-0 ${
@@ -226,6 +250,7 @@ export default function RiskRobinGame() {
                         card={s.currentContext}
                         highlighted={g.isHighlighted("context")}
                         size="lg"
+                        fillHeight
                       />
                     ) : (
                       <ContextCard
@@ -233,6 +258,7 @@ export default function RiskRobinGame() {
                         card={{ id: "back", title: "", description: "", icons: [] }}
                         highlighted
                         size="lg"
+                        fillHeight
                       />
                     )}
                   </div>
@@ -365,6 +391,7 @@ export default function RiskRobinGame() {
         </>
       )}
     </div>
+    </PersonaNamesProvider>
   );
 }
 

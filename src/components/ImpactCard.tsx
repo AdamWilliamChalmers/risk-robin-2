@@ -1,5 +1,5 @@
 import type { ImpactCard as ImpactCardT } from "../data/impactCards";
-import { personaFor } from "../game/personas";
+import { useResolvedPersona } from "../game/personaNamesContext";
 import CategoryBadge from "./CategoryBadge";
 
 type Props = {
@@ -18,21 +18,55 @@ type Props = {
  *  - light-blue body holding the description
  *  - white footer strip with the category icon(s)
  *
- * Card I1 has a pre-baked PNG; everything else is rendered with HTML so the
- * numbers (1–73) and the icons can come straight from the data file.
+ * Every card uses the same fixed slot heights so a row of cards is perfectly
+ * uniform regardless of how short or long any individual title or description
+ * is. The PNG-baked card (I1) is sized to match the same outer dimensions.
  */
 
-// Exact colours sampled from the printed PDF card (impact_1.png).
 const BAND_BLUE = "#7A97CD";
 const BODY_BLUE = "#DDEAF4";
 
-export default function ImpactCard({ card, selected, recommendedBy, onClick, compact }: Props) {
+// Per-mode dimensions tuned to keep every card identical in a row.
+const DIMS = {
+  compact: {
+    width: 176, // w-44
+    height: 256,
+    titleHeight: 86,
+    bandHeight: 22,
+    footerHeight: 48,
+    numCircle: 28,
+    numFont: 12,
+    titleFont: "text-[13px] leading-tight",
+    bodyFont: "text-[11px] leading-snug",
+    iconSize: "sm" as const,
+  },
+  full: {
+    width: 240, // w-60
+    height: 340,
+    titleHeight: 110,
+    bandHeight: 28,
+    footerHeight: 64,
+    numCircle: 34,
+    numFont: 14,
+    titleFont: "text-base sm:text-lg leading-tight",
+    bodyFont: "text-xs sm:text-sm leading-relaxed",
+    iconSize: "md" as const,
+  },
+};
+
+export default function ImpactCard({
+  card,
+  selected,
+  recommendedBy,
+  onClick,
+  compact,
+}: Props) {
   const isClickable = !!onClick;
-  const widthClass = compact ? "w-44" : "w-60";
+  const dims = compact ? DIMS.compact : DIMS.full;
   const hasRibbon = !!recommendedBy && recommendedBy.length > 0;
 
   // Number shown on the card. Strip the leading "I" used for IDs, and show a
-  // dash for wildcards (they have no printed number).
+  // star for wildcards (they have no printed number).
   const displayNum = card.isWildcard ? "✦" : card.id.replace(/^I/, "");
 
   return (
@@ -40,47 +74,41 @@ export default function ImpactCard({ card, selected, recommendedBy, onClick, com
       role={isClickable ? "button" : undefined}
       onClick={onClick}
       className={[
-        "relative rounded-2xl card-shadow overflow-hidden bg-white",
-        widthClass,
-        isClickable ? "cursor-pointer hover:-translate-y-1 transition-transform" : "",
+        "relative rounded-2xl card-shadow overflow-hidden bg-white flex flex-col shrink-0",
+        isClickable
+          ? "cursor-pointer hover:-translate-y-1 transition-transform"
+          : "",
         selected ? "ring-4 ring-robinOrange" : "",
       ].join(" ")}
+      style={{ width: dims.width, height: dims.height }}
     >
-      {/* Recommended-by ribbon. Sits above the title strip so it never
-          overlaps the card content. */}
+      {/* Recommended-by ribbon. Each tag is tinted with the persona's brand
+          colour so a quick glance at the card tells you *which* local picked
+          it. Absolutely positioned so the pills never affect the card's
+          internal layout / heights. */}
       {hasRibbon && (
-        <div className="flex flex-wrap justify-end gap-1 px-2 pt-2">
-          {recommendedBy!.map((v) => {
-            const p = personaFor(v);
-            const label = p?.shortName ?? voiceShort(v);
-            const title = p
-              ? `${p.name} (${p.role}) recommends this`
-              : `${v} recommends this`;
-            return (
-              <span
-                key={v}
-                className="text-[10px] font-semibold bg-robinOrange text-white px-2 py-0.5 rounded-full shadow"
-                title={title}
-              >
-                {label}
-              </span>
-            );
-          })}
+        <div className="absolute top-1 right-1 z-10 flex flex-wrap justify-end gap-1 pointer-events-none max-w-[80%]">
+          {recommendedBy!.map((v) => (
+            <RecommenderPill key={v} voice={v} />
+          ))}
         </div>
       )}
 
       {card.image ? (
-        <img src={`/${card.image}`} alt={card.title} className="w-full block" />
+        <img
+          src={`/${card.image}`}
+          alt={card.title}
+          className="block w-full h-full object-cover"
+        />
       ) : (
         <>
-          {/* White title strip */}
+          {/* Title strip - fixed height, title vertically centred */}
           <div
-            className={`px-3 ${compact ? "pt-4 pb-3" : "pt-5 pb-4"} text-center bg-white`}
+            className="px-3 text-center bg-white flex items-center justify-center"
+            style={{ height: dims.titleHeight }}
           >
             <h4
-              className={`font-display ${
-                compact ? "text-sm leading-snug" : "text-base sm:text-lg leading-tight"
-              } font-bold text-stone-800`}
+              className={`font-display font-bold text-stone-800 ${dims.titleFont}`}
             >
               {card.title}
             </h4>
@@ -88,18 +116,15 @@ export default function ImpactCard({ card, selected, recommendedBy, onClick, com
 
           {/* Solid blue band with floating white number disc */}
           <div
-            className="relative flex items-center justify-center"
-            style={{
-              background: BAND_BLUE,
-              height: compact ? 22 : 28,
-            }}
+            className="relative flex items-center justify-center shrink-0"
+            style={{ background: BAND_BLUE, height: dims.bandHeight }}
           >
             <div
               className="absolute flex items-center justify-center rounded-full bg-white text-stone-700 font-semibold shadow-sm"
               style={{
-                width: compact ? 28 : 34,
-                height: compact ? 28 : 34,
-                fontSize: compact ? 12 : 14,
+                width: dims.numCircle,
+                height: dims.numCircle,
+                fontSize: dims.numFont,
                 top: "50%",
                 transform: "translateY(-50%)",
               }}
@@ -108,33 +133,34 @@ export default function ImpactCard({ card, selected, recommendedBy, onClick, com
             </div>
           </div>
 
-          {/* Light blue description body */}
+          {/* Light blue description body - takes all remaining space */}
           <div
-            className={`px-4 ${compact ? "py-3" : "py-4"}`}
+            className="flex-1 px-3 py-3 flex items-start justify-center overflow-hidden"
             style={{ background: BODY_BLUE }}
           >
-            {!compact && (
-              <p className="text-stone-700 text-xs sm:text-sm leading-relaxed text-center">
-                {card.description}
-              </p>
-            )}
-            {compact && (
-              <p className="text-stone-700 text-[11px] leading-snug text-center line-clamp-3">
-                {card.description}
-              </p>
-            )}
+            <p
+              className={`text-stone-700 text-center ${dims.bodyFont}`}
+            >
+              {card.description}
+            </p>
           </div>
 
-          {/* White footer strip with icons */}
-          <div className="flex justify-center gap-2 py-3 bg-white">
+          {/* White footer strip with icons - fixed height */}
+          <div
+            className="flex items-center justify-center gap-2 bg-white shrink-0"
+            style={{ height: dims.footerHeight }}
+          >
             {card.icons.length > 0 ? (
-              card.icons.slice(0, 4).map((c) => (
-                <CategoryBadge key={c} category={c} size={compact ? "sm" : "md"} />
-              ))
-            ) : (
-              // Wildcards have no icons; keep the footer height consistent.
-              <div style={{ height: compact ? 22 : 32 }} />
-            )}
+              card.icons
+                .slice(0, 4)
+                .map((c) => (
+                  <CategoryBadge
+                    key={c}
+                    category={c}
+                    size={dims.iconSize}
+                  />
+                ))
+            ) : null}
           </div>
         </>
       )}
@@ -146,4 +172,27 @@ function voiceShort(v: string) {
   if (v.startsWith("Resident")) return "Resident";
   if (v.startsWith("Economy")) return "Economy";
   return "Environment";
+}
+
+/**
+ * Small coloured pill identifying which persona recommended this card.
+ * Extracted so we can call the `useResolvedPersona` hook (and pick up the
+ * per-game LLM-generated name) for each pill in the list.
+ */
+function RecommenderPill({ voice }: { voice: string }) {
+  const p = useResolvedPersona(voice);
+  const label = p?.shortName ?? voiceShort(voice);
+  const title = p
+    ? `${p.name} (${p.role}) recommends this`
+    : `${voice} recommends this`;
+  const accent = p?.color ?? "#7C3E97";
+  return (
+    <span
+      className="text-[10px] font-semibold text-white px-2 py-0.5 rounded-full shadow"
+      style={{ background: accent }}
+      title={title}
+    >
+      {label}
+    </span>
+  );
 }

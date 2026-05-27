@@ -87,6 +87,22 @@ export type FinalReflections = {
   };
 };
 
+/**
+ * Per-game persona display-name overrides, populated by the LLM when the
+ * game starts so each session has a fresh trio of names. Null while we
+ * haven't fetched (or the fetch failed) — in that case components fall back
+ * to the static defaults declared in `game/personas.ts`.
+ */
+export type PersonaOverride = {
+  name: string;
+  shortName: string;
+  role: string;
+  location: string;
+  bio: string;
+};
+
+export type PersonaNameOverrides = Record<AIVoice, PersonaOverride>;
+
 export type GameState = {
   gameStarted: boolean;
   stage: Stage;
@@ -110,4 +126,7 @@ export type GameState = {
   highlightedArea: HighlightArea;
   lastUpdatedCategories: ImpactCategory[];
   finalReflections: FinalReflections | null;
+  /** Per-game LLM-generated persona names. Null until /api/persona-names
+   *  resolves; components fall back to static defaults while null. */
+  personaNames: PersonaNameOverrides | null;
 };

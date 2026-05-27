@@ -1,6 +1,10 @@
-import type { AISuggestion } from "../game/types";
+import type { AISuggestion, AIVoice } from "../game/types";
 import type { ImpactCard } from "../data/impactCards";
-import { PERSONAS, personaFor } from "../game/personas";
+import { PERSONAS } from "../game/personas";
+import {
+  useResolvedPersona,
+  usePersonaOverrides,
+} from "../game/personaNamesContext";
 import InfoChip from "./InfoChip";
 
 type Props = {
@@ -9,8 +13,13 @@ type Props = {
   highlighted: boolean;
 };
 
-export default function AIAnalystPanel({ suggestions, hand, highlighted }: Props) {
+export default function AIAnalystPanel({
+  suggestions,
+  hand,
+  highlighted,
+}: Props) {
   const byId = new Map(hand.map((c) => [c.id, c]));
+  const overrides = usePersonaOverrides();
 
   return (
     <section
@@ -31,14 +40,21 @@ export default function AIAnalystPanel({ suggestions, hand, highlighted }: Props
               look different depending on whose life you weigh.
             </p>
             <ul className="space-y-1.5 text-xs">
-              {Object.values(PERSONAS).map((p) => (
-                <li key={p.voice}>
-                  <strong style={{ color: p.color }}>
-                    {p.emoji} {p.name}
-                  </strong>{" "}
-                  — {p.role}, {p.location}. {p.bio}
-                </li>
-              ))}
+              {Object.values(PERSONAS).map((base) => {
+                const o = overrides?.[base.voice];
+                const name = o?.name ?? base.name;
+                const role = o?.role ?? base.role;
+                const location = o?.location ?? base.location;
+                const bio = o?.bio ?? base.bio;
+                return (
+                  <li key={base.voice}>
+                    <strong style={{ color: base.color }}>
+                      {base.emoji} {name}
+                    </strong>{" "}
+                    — {role}, {location}. {bio}
+                  </li>
+                );
+              })}
             </ul>
             <p className="mt-2 text-xs text-stone-500">
               They suggest — you decide. Each highlights cards already in{" "}
@@ -53,63 +69,89 @@ export default function AIAnalystPanel({ suggestions, hand, highlighted }: Props
       </header>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {suggestions.map((s) => {
-          const p = personaFor(s.voice);
           const cards = s.recommendedImpactIds
             .map((id) => byId.get(id))
             .filter((c): c is ImpactCard => !!c);
-
-          const headlineName = p?.name ?? s.voice;
-          const subtitle = p
-            ? `${p.role} · ${p.location}`
-            : s.voice;
-          const accent = p?.color ?? "#7C3E97";
-          const emoji = p?.emoji ?? "💬";
-          const perspective = p?.perspective ?? s.voice;
-
           return (
-            <article
+            <PersonaSuggestionCard
               key={s.voice}
-              className="rounded-2xl bg-pastel-cream p-4 shadow-sm animate-fadeIn"
-              style={{ borderTop: `4px solid ${accent}` }}
-            >
-              <div className="flex items-start gap-3 mb-2">
-                <span
-                  className="shrink-0 flex items-center justify-center w-11 h-11 rounded-full bg-white text-2xl shadow-sm"
-                  style={{ outline: `2px solid ${accent}33` }}
-                  aria-hidden
-                >
-                  {emoji}
-                </span>
-                <div className="min-w-0">
-                  <h3
-                    className="font-display text-base leading-tight"
-                    style={{ color: accent }}
-                  >
-                    {headlineName}
-                  </h3>
-                  <p className="text-xs text-stone-600 leading-snug">
-                    {subtitle}
-                  </p>
-                </div>
-              </div>
-              <p className="text-[11px] uppercase tracking-wider text-stone-500 mb-3">
-                {perspective}
-              </p>
-              <p className="text-sm text-stone-700 mb-3 leading-relaxed">{s.reason}</p>
-              <ul className="space-y-1.5">
-                {cards.map((c) => (
-                  <li
-                    key={c.id}
-                    className="text-sm bg-white rounded-xl px-3 py-2 shadow-sm border border-stone-100"
-                  >
-                    <span className="font-semibold">{c.title}</span>
-                  </li>
-                ))}
-              </ul>
-            </article>
+              voice={s.voice as AIVoice}
+              reason={s.reason}
+              cards={cards}
+            />
           );
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * One column of the analyst panel: a single persona's avatar, role, reason
+ * and the impact cards they're recommending. Extracted so we can use the
+ * `useResolvedPersona` hook to pick up the per-game LLM-generated name.
+ */
+function PersonaSuggestionCard({
+  voice,
+  reason,
+  cards,
+}: {
+  voice: AIVoice;
+  reason: string;
+  cards: ImpactCard[];
+}) {
+  const p = useResolvedPersona(voice);
+  const headlineName = p?.name ?? voice;
+  const subtitle = p ? `${p.role} · ${p.location}` : voice;
+  const accent = p?.color ?? "#7C3E97";
+  const emoji = p?.emoji ?? "💬";
+  const perspective = p?.perspective ?? voice;
+  const shortName = p?.shortName ?? voice;
+
+  return (
+    <article
+      className="rounded-2xl bg-pastel-cream p-4 shadow-sm animate-fadeIn"
+      style={{ borderTop: `4px solid ${accent}` }}
+    >
+      <div className="flex items-start gap-3 mb-2">
+        <span
+          className="shrink-0 flex items-center justify-center w-11 h-11 rounded-full bg-white text-2xl shadow-sm"
+          style={{ outline: `2px solid ${accent}33` }}
+          aria-hidden
+        >
+          {emoji}
+        </span>
+        <div className="min-w-0">
+          <h3
+            className="font-display text-base leading-tight"
+            style={{ color: accent }}
+          >
+            {headlineName}
+          </h3>
+          <p className="text-xs text-stone-600 leading-snug">{subtitle}</p>
+        </div>
+      </div>
+      <p className="text-[11px] uppercase tracking-wider text-stone-500 mb-3">
+        {perspective}
+      </p>
+      <p className="text-sm text-stone-700 mb-3 leading-relaxed">{reason}</p>
+      <ul className="space-y-1.5">
+        {cards.map((c) => (
+          <li
+            key={c.id}
+            className="text-sm bg-white rounded-xl px-3 py-2 shadow-sm flex items-start gap-2"
+            style={{ borderLeft: `4px solid ${accent}` }}
+          >
+            <span
+              className="shrink-0 text-[10px] font-semibold text-white px-2 py-0.5 rounded-full mt-0.5"
+              style={{ background: accent }}
+            >
+              {shortName}
+            </span>
+            <span className="font-semibold">{c.title}</span>
+          </li>
+        ))}
+      </ul>
+    </article>
   );
 }

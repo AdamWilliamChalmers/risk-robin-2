@@ -36,6 +36,11 @@ import type { IncomingMessage, ServerResponse } from "node:http";
  *     in:  { rawText, kind, context? }
  *     out: { polished: string }                 // tightened version
  *
+ *   POST /api/persona-names
+ *     in:  {}
+ *     out: { personas: { voice, name, shortName, role, location, bio }[] }
+ *          // three varied Edinburgh residents (jobs / life-situations differ)
+ *
  * If OPENAI_API_KEY is missing or OpenAI returns an error, each endpoint
  * responds with HTTP 503 and a JSON `{ error: "..." }`. The client falls
  * back to its deterministic behaviour in that case, so the game never
@@ -60,6 +65,7 @@ export function aiPlugin(env: Env): Plugin {
     "/api/robin-summary": handleRobinSummary,
     "/api/follow-up": handleFollowUp,
     "/api/polish-text": handlePolishText,
+    "/api/persona-names": handlePersonaNames,
   };
 
   return {
@@ -351,6 +357,125 @@ Output JSON ONLY: { "polished": "..." }`;
     throw new Error("Model did not return a polished string");
   }
   return { polished: polished.trim() };
+}
+
+/**
+ * Generate a fresh trio of personas for the three AI voices. Each persona
+ * keeps its voice / lens fixed (Resident / Economy / Environment) but the
+ * concrete identity — name, role, neighbourhood, and one-line bio — is freshly
+ * imagined per session so the player meets a varied cross-section of Edinburgh
+ * over multiple playthroughs (student, musician, unemployed parent, retired
+ * worker, taxi driver, NHS nurse, etc.).
+ *
+ * Each persona has:
+ *  - `voice`: canonical AIVoice string (drives prompting / scoring downstream)
+ *  - `name`: full first + last name (e.g. "Anya Petrova")
+ *  - `shortName`: one-word display label for small card pills
+ *  - `role`: their job or life situation (NOT limited to "teacher / café owner
+ *     / sustainability officer" — should vary widely)
+ *  - `location`: an Edinburgh neighbourhood, workplace, or "across the city"
+ *  - `bio`: a one-sentence bio that fits the role & lens
+ */
+async function handlePersonaNames(env: Env, _body: unknown): Promise<unknown> {
+  const system = `You invent three distinct Edinburgh residents for an educational game about sustainable tourism. The three personas keep their canonical "voice" (a lens on the city), but you choose everything else: name, role / life-situation, neighbourhood, and one-line bio.
+
+The three voices (LENSES — do not change these):
+1. voice="Resident Voice" — looks at tourism through everyday life in Edinburgh: housing, noise, neighbours, schools, getting around, what the city feels like to live in.
+2. voice="Economy Voice" — looks at tourism through livelihoods and money: jobs, wages, small businesses, prices, visitor spending, hospitality, fair work.
+3. voice="Environment and City Voice" — looks at tourism through public services and the environment: transport, waste, emissions, green space, net-zero, the systems that keep the city running.
+
+For each voice, invent a CONCRETE PERSON with these fields:
+- "name": full first + last name. Mix backgrounds across the trio — Scottish names AND modern Edinburgh resident heritages (e.g. South Asian, Polish, Nigerian, Chinese, Eastern European, Caribbean, etc.). Avoid alliterative, silly, or fantasy names.
+- "shortName": just the first name.
+- "role": their job OR life situation. VARY THIS WIDELY across plays — examples (use as inspiration only, mix and match, don't always pick from this list):
+   • student (University of Edinburgh, Napier, Heriot-Watt), apprentice
+   • unemployed, between jobs, looking for work, full-time carer, stay-at-home parent
+   • retired (teacher, postie, nurse, joiner, civil servant…)
+   • musician, busker, gigging actor, festival technician, bartender, chef
+   • taxi / Uber driver, bus driver, delivery rider, lorry driver
+   • NHS nurse, GP receptionist, junior doctor, social worker, paramedic
+   • shopkeeper, hairdresser, tattoo artist, market trader, Airbnb cleaner
+   • housing officer, librarian, archivist, primary teacher, lecturer
+   • startup founder, software engineer working remotely, freelance designer
+   • council planner, sustainability officer, transport analyst, park warden
+   • construction worker, electrician, plumber, joiner
+   • tour guide, hotel receptionist, restaurant manager, café owner
+   It is FINE for the Resident Voice to be a barista, or for the Economy Voice to be unemployed, etc. The lens is HOW they think, not their job title. Choose roles that make the voice's perspective vivid.
+- "location": an Edinburgh-anchored place that suits the role. Neighbourhoods (Leith, Gorgie, Newington, Marchmont, Stockbridge, Portobello, Sighthill, Wester Hailes, Granton, Morningside, Pilrig, Tollcross, Bruntsfield, Murrayfield, Trinity, Corstorphine, Liberton, Niddrie, Easter Road, Dalry, Restalrig, Craigmillar, Lochend), workplaces ("Royal Mile", "Princes Street", "The Meadows", "Edinburgh University", "Edinburgh City Council", "Western General", "Waverley Station") or "across the city" all work.
+- "bio": ONE sentence (max ~22 words) that grounds the persona in something specific — a routine, a worry, a small concrete detail of their life in Edinburgh. Should sound human, not corporate.
+
+Output JSON ONLY in exactly this shape:
+{
+  "personas": [
+    { "voice": "Resident Voice", "name": "...", "shortName": "...", "role": "...", "location": "...", "bio": "..." },
+    { "voice": "Economy Voice", "name": "...", "shortName": "...", "role": "...", "location": "...", "bio": "..." },
+    { "voice": "Environment and City Voice", "name": "...", "shortName": "...", "role": "...", "location": "...", "bio": "..." }
+  ]
+}
+
+Hard rules:
+- The three roles MUST be different from each other (do not return three students, or three café owners).
+- AVOID the default names "Iona MacLeod", "Callum Bryce", "Priya Shankar".
+- AVOID always defaulting Resident → teacher, Economy → café owner, Environment → council officer. Surprise the player.
+- Bios must not be generic ("cares about the city"). Anchor them in a specific habit, route, worry, or small detail.`;
+
+  const user = "Invent the three personas now. Make them feel like real, varied Edinburgh residents — not three versions of the same kind of person.";
+
+  const data = await callOpenAI(env, system, user, { temperature: 1.0 });
+  const parsed = parseJsonObject(data);
+  const personas = (parsed as { personas?: unknown }).personas;
+  if (!Array.isArray(personas)) {
+    throw new Error("Model did not return a personas array");
+  }
+  const VOICES = [
+    "Resident Voice",
+    "Economy Voice",
+    "Environment and City Voice",
+  ] as const;
+  const cleaned = personas
+    .map((p) => {
+      const o = p as {
+        voice?: string;
+        name?: string;
+        shortName?: string;
+        role?: string;
+        location?: string;
+        bio?: string;
+      };
+      if (typeof o.voice !== "string") return null;
+      if (!(VOICES as readonly string[]).includes(o.voice)) return null;
+      const fields = ["name", "shortName", "role", "location", "bio"] as const;
+      for (const f of fields) {
+        const v = o[f];
+        if (typeof v !== "string" || v.trim().length === 0) return null;
+      }
+      return {
+        voice: o.voice,
+        name: o.name!.trim().slice(0, 60),
+        shortName: o.shortName!.trim().slice(0, 24),
+        role: o.role!.trim().slice(0, 80),
+        location: o.location!.trim().slice(0, 80),
+        bio: o.bio!.trim().slice(0, 240),
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+  if (cleaned.length !== 3) {
+    throw new Error(
+      `Expected 3 valid personas after filtering, got ${cleaned.length}`
+    );
+  }
+  // Make sure each voice appears exactly once.
+  const seenVoices = new Set(cleaned.map((p) => p.voice));
+  if (seenVoices.size !== 3) {
+    throw new Error("Duplicate voices returned by model");
+  }
+  // And that the three roles are distinct (case-insensitive trimmed) — we
+  // really don't want three baristas.
+  const seenRoles = new Set(cleaned.map((p) => p.role.toLowerCase()));
+  if (seenRoles.size !== 3) {
+    throw new Error("Duplicate roles returned by model");
+  }
+  return { personas: cleaned };
 }
 
 /* ---------- OpenAI plumbing ---------- */

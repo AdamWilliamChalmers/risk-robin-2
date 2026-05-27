@@ -7,6 +7,7 @@ import type {
   HighlightArea,
   Ratings,
   FinalReflections,
+  PersonaNameOverrides,
 } from "./types";
 import type { ImpactCategory } from "../data/categories";
 import { CATEGORY_ORDER, CATEGORY_LABELS } from "../data/categories";
@@ -75,6 +76,7 @@ function initialState(): GameState {
     highlightedArea: null,
     lastUpdatedCategories: [],
     finalReflections: null,
+    personaNames: null,
   };
 }
 
@@ -108,6 +110,9 @@ type Action =
   | { type: "NEXT_ROUND_OR_FINISH" }
   | { type: "UPDATE_FINAL_REFLECTIONS"; payload: Partial<FinalReflections> }
   | { type: "SUBMIT_FINAL_REFLECTIONS" }
+  // LLM-generated per-game persona names land here when /api/persona-names
+  // resolves. Stays null on failure so the static defaults remain in use.
+  | { type: "SET_PERSONA_NAMES"; payload: PersonaNameOverrides }
   | { type: "RESTART" };
 
 function reducer(state: GameState, action: Action): GameState {
@@ -454,6 +459,11 @@ function reducer(state: GameState, action: Action): GameState {
         highlightedArea: STAGE_HIGHLIGHT.final_report,
       };
 
+    case "SET_PERSONA_NAMES":
+      // Only meaningful while a game is running. After RESTART the field is
+      // back to null and the next START_GAME will trigger a fresh fetch.
+      return { ...state, personaNames: action.payload };
+
     case "RESTART":
       return initialState();
   }
@@ -570,6 +580,11 @@ export function useGame(provider: AIProvider = defaultProvider) {
     () => dispatch({ type: "SUBMIT_FINAL_REFLECTIONS" }),
     []
   );
+  const setPersonaNames = useCallback(
+    (names: PersonaNameOverrides) =>
+      dispatch({ type: "SET_PERSONA_NAMES", payload: names }),
+    []
+  );
   const restart = useCallback(() => dispatch({ type: "RESTART" }), []);
 
   const isHighlighted = useCallback(
@@ -602,6 +617,7 @@ export function useGame(provider: AIProvider = defaultProvider) {
       next,
       updateFinalReflections,
       submitFinalReflections,
+      setPersonaNames,
       restart,
       isHighlighted,
     }),
@@ -611,7 +627,7 @@ export function useGame(provider: AIProvider = defaultProvider) {
       upgradeLatestSummary, skipFollowup, updateRatings,
       submitRatings, openClassify, toggleUserCategory, confirmClassification,
       drawReplacement, next, updateFinalReflections, submitFinalReflections,
-      restart, isHighlighted,
+      setPersonaNames, restart, isHighlighted,
     ]
   );
 }

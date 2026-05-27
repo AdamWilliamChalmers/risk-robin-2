@@ -45,8 +45,16 @@ export default function RobinGuide({ state, highlighted }: Props) {
         }`}
         data-area="robin"
       >
-        <div className="bg-white rounded-3xl ring-2 ring-robinOrange/40 shadow-[0_22px_48px_-12px_rgba(60,30,10,0.45)] px-5 py-2.5 flex items-center gap-3.5">
-          <div className="shrink-0 rounded-2xl bg-white ring-2 ring-robinOrange/60 p-1 overflow-hidden">
+        {/* `key={state.stage}` is the trick that makes the nudge pulse re-fire
+            on every stage change — React unmounts the inner card and mounts a
+            fresh one, restarting the CSS keyframes. The wrapper above keeps
+            its identity so the `highlighted` ring (tour spotlight) isn't
+            disturbed. */}
+        <div
+          key={state.stage}
+          className="robin-nudge bg-white rounded-3xl ring-2 ring-robinOrange/40 px-5 py-2.5 flex items-center gap-3.5"
+        >
+          <div className="shrink-0 rounded-2xl bg-white ring-2 ring-robinOrange/60 p-1 overflow-hidden robin-avatar-bounce">
             <AnimatedRobin className="block w-14 h-14" />
           </div>
           <div className="min-w-0 flex-1">
@@ -76,37 +84,50 @@ export default function RobinGuide({ state, highlighted }: Props) {
   );
 }
 
+/**
+ * Robin's per-stage line. Every line ends with the *next concrete action* the
+ * player should take, so the orange CTA in the footer always echoes what
+ * Robin just said. Lines that auto-advance (e.g. `reveal_context`,
+ * `update_board`) still describe what's about to happen so the player isn't
+ * surprised.
+ *
+ * Note: the three locals' names are deliberately NOT mentioned by name here
+ * — they're LLM-generated per session, so referring to them generically
+ * ("your three locals") keeps Robin's line in sync regardless of who shows up.
+ */
 function robinLine(s: GameState): string {
   switch (s.stage) {
     case "welcome":
       return "Welcome! I'm Robin. Click Start when you're ready — I recommend taking the quick tour first.";
     case "round_intro":
-      return `Round ${s.roundNumber} of ${s.totalRounds}. Click the orange "Draw context" button to deal this round's Context Card.`;
+      return `Round ${s.roundNumber} of ${s.totalRounds}. Click the orange "Draw context" button below to deal this round's Context Card.`;
     case "reveal_context":
       return s.currentContext
-        ? `Here's the context: "${s.currentContext.title}". Take a moment to read it. In a second I'll bring in three Edinburgh locals — Iona, Callum and Priya — to suggest cards from your hand.`
+        ? `Here's the context: "${s.currentContext.title}". Take a moment to read it — in a second I'll bring in your three locals to suggest cards from your hand.`
         : "Let's see what comes up next.";
     case "ai_discussion":
-      return "Iona, Callum and Priya have each picked cards from your hand for this context. Skim what they say — they often disagree, and that's the point. You have the final say.";
+      return "Your three locals have each picked cards from your hand for this context. Skim what they say — they often disagree, and that's the point. When you're ready, click \u201cChoose from my hand \u2192\u201d below to make your pick.";
     case "choose_impact":
-      return "Pick the Impact Card from your hand below that best matches this context. Don't see one that fits? Click the ✶ Wild Card on the right to write your own.";
+      return "Now your turn: pick one Impact Card from your hand below that best fits this context. Don't see one that fits? Click the \u2735 Wild Card on the right to write your own.";
     case "collect_evidence":
-      return "Now the important part: give a concrete real example for why this impact matters. A specific place, a moment, a person — the more grounded, the more weight it carries. There's no wrong answer.";
+      return "Now the important part: type a concrete real example into the box for why this impact matters — a specific place, a moment, a person. Hit \u201cSubmit evidence \u2192\u201d when you're done. The more grounded, the more weight it carries.";
     case "follow_up":
-      return "Your example was a little general. One concrete detail — a street name, a time of year, what someone actually said — anchors it. You can skip if you really mean it general.";
+      return "Your example was a little general. Add one concrete detail in the box — a street name, a time of year, what someone actually said — then submit. Or click \u201cSkip\u201d if you really meant it general.";
     case "rate_impact":
-      return "Three quick questions — about ten seconds. How important is this, is it positive or negative, and should the Council prioritise it?";
+      return "Three quick questions — about ten seconds. Pick an answer for each: how important is this, is it positive or negative, and should the Council prioritise it? Then click \u201cConfirm ratings \u2192\u201d.";
     case "robin_summary":
-      return "I've drafted your reasoning as a short case-study entry. Next we'll mark it on the Impact Assessment Board — you'll pick which categories it affects.";
+      return "I've drafted your reasoning as a short case-study entry. Read it through, then click \u201cClassify on the board \u2192\u201d to record this round on the Impact Assessment Board.";
     case "classify_impact":
-      return "I've ticked the row(s) I think your evidence fits. Confirm them — or click to add and remove rows. Your call decides which markers go on the board.";
+      return "I've ticked the row(s) I think your evidence fits. Click rows to add or remove, then hit \u201cConfirm categories \u2192\u201d below. Your call decides which markers go on the board.";
     case "update_board":
-      return "Marker added. Notice the pattern your evidence is building across categories — that pattern is the real output of this game, not a high score.";
+      return "Marker added! Notice the pattern your evidence is building across categories. When you're ready, click \u201cDraw a replacement card \u2192\u201d below to refill your hand.";
     case "draw_replacement":
-      return "I'll deal you a fresh Impact Card so your hand stays at eight, then we move to the next round.";
+      return s.roundNumber >= s.totalRounds
+        ? "Last round done. Click \u201cAdd final reflections \u2192\u201d below to share what you took away."
+        : "Fresh Impact Card on the way so your hand stays at eight. Click \u201cNext round \u2192\u201d below to continue.";
     case "final_reflection":
-      return "Six rounds done! Before I show you the final report, four quick reflection prompts to tie your thinking together.";
+      return "Six rounds done! Before I show you the final report, answer the four reflection prompts below — then click \u201cSee my report \u2192\u201d.";
     case "final_report":
-      return "Great work. Here's the full pattern you built across six rounds — case studies, ratings, board scores, and your reflections. You can print this as a PDF.";
+      return "Great work. Here's the full pattern you built across six rounds — case studies, ratings, board scores, and your reflections. Click \u201cPrint / save as PDF\u201d to keep a copy.";
   }
 }

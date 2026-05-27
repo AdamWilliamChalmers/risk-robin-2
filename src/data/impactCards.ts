@@ -28,7 +28,6 @@ export const IMPACT_CARDS: ImpactCard[] = [
       "Residents enjoy vibrant atmosphere that comes with the event and feel cultural pride for the city",
     icons: ["better_quality_of_life_residents"],
     tone: "positive",
-    image: "impact_1.png",
   },
   {
     id: "I2",
