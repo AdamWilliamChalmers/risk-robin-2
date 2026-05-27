@@ -483,6 +483,12 @@ function EdinburghSkyline() {
           <stop offset="55%" stopColor="#fff3c4" stopOpacity="0.28" />
           <stop offset="100%" stopColor="#fff3c4" stopOpacity="0.85" />
         </linearGradient>
+        {/* Clip mask the size of the cat's window — anything the cat draws
+            outside the window outline (i.e. its body below the sill) is
+            cropped, so all we ever see is whatever pokes above the sill. */}
+        <clipPath id="rr-cat-window-clip">
+          <rect x="624" y="276" width="28" height="38" rx="2" />
+        </clipPath>
       </defs>
 
       {/* Distant hill behind the castle (Arthur's Seat vibe) */}
@@ -641,35 +647,46 @@ function EdinburghSkyline() {
         <rect x="592" y="416" width="36" height="54" fill="#7a3a25" rx="3" />
         <circle cx="620" cy="446" r="1.6" fill="#f1c97a" />
 
-        {/* Easter egg: a small black cat silhouette in one of the lit
-            windows. The silhouette is always there but only reads at night
-            when the window behind it is glowing warm yellow. */}
-        <g className="rr-window-cat" transform="translate(638, 310)">
-          <path
-            d="M 5 -3 Q 12 -7 10 -15 Q 9 -18 6 -17"
-            stroke="#0a0a0a"
-            strokeWidth="2.4"
-            fill="none"
-            strokeLinecap="round"
-          />
-          <ellipse cx="0" cy="-7" rx="5.4" ry="8" fill="#0a0a0a" />
-          <circle cx="0" cy="-16" r="4.2" fill="#0a0a0a" />
-          <polygon points="-3.6,-18.6 -2.4,-21.4 -1.2,-18.4" fill="#0a0a0a" />
-          <polygon points="1.2,-18.4 2.4,-21.4 3.6,-18.6" fill="#0a0a0a" />
-          <circle
-            cx="-1.45"
-            cy="-16.4"
-            r="0.55"
-            fill="#ffe080"
-            className="rr-cat-eye"
-          />
-          <circle
-            cx="1.45"
-            cy="-16.4"
-            r="0.55"
-            fill="#ffe080"
-            className="rr-cat-eye"
-          />
+        {/* Easter egg: a curious black cat emerges in one of the lit
+            tenement windows once dusk falls. The outer g positions the cat
+            inside the window; the inner g animates the emergence so only
+            the head pokes above the sill. The clipPath hides the rest. */}
+        <g clipPath="url(#rr-cat-window-clip)">
+          <g transform="translate(638, 326)">
+            <g className="rr-window-cat">
+              <path
+                d="M 5 -3 Q 12 -7 10 -15 Q 9 -18 6 -17"
+                stroke="#0a0a0a"
+                strokeWidth="2.4"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <ellipse cx="0" cy="-7" rx="5.4" ry="8" fill="#0a0a0a" />
+              <circle cx="0" cy="-16" r="4.2" fill="#0a0a0a" />
+              <polygon
+                points="-3.6,-18.6 -2.4,-21.4 -1.2,-18.4"
+                fill="#0a0a0a"
+              />
+              <polygon
+                points="1.2,-18.4 2.4,-21.4 3.6,-18.6"
+                fill="#0a0a0a"
+              />
+              <circle
+                cx="-1.45"
+                cy="-16.4"
+                r="0.55"
+                fill="#ffe080"
+                className="rr-cat-eye"
+              />
+              <circle
+                cx="1.45"
+                cy="-16.4"
+                r="0.55"
+                fill="#ffe080"
+                className="rr-cat-eye"
+              />
+            </g>
+          </g>
         </g>
 
         {/* Tenement 2 (slightly shorter, dusty pink) */}
@@ -907,28 +924,32 @@ const splashCss = `
   opacity: 0.95;
 }
 
-/* Window cat — softens into the dark window in day, sharpens against the
-   warm glow at night with eyes that blink. */
+/* Window cat — hidden behind the sill in the daytime, emerges with a
+   gentle bob once dusk falls. The clipPath in the SVG hides anything that
+   would draw below the window outline, so only the head ever shows. */
 .rr-window-cat {
-  opacity: 0.55;
-  transition: opacity 2s ease-in-out;
+  transform: translateY(28px);
+  opacity: 0;
+  transition: transform 2.6s cubic-bezier(.34, 1.3, .5, 1) 0.8s,
+              opacity 1.6s ease-in-out 0.8s;
 }
 .rr-splash-night .rr-window-cat {
+  transform: translateY(0);
   opacity: 1;
 }
 .rr-cat-eye {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 .rr-splash-night .rr-cat-eye {
-  animation: rrCatBlink 4.2s ease-in-out infinite;
+  animation: rrCatBlink 4.2s 2.2s ease-in-out infinite;
 }
 @keyframes rrCatBlink {
-  0%, 38%, 100% { opacity: 0.9; }
+  0%, 38%, 100% { opacity: 0.95; }
   40%, 43%      { opacity: 0; }
-  46%           { opacity: 0.9; }
-  86%           { opacity: 0.9; }
+  46%           { opacity: 0.95; }
+  86%           { opacity: 0.95; }
   88%, 90%      { opacity: 0; }
-  93%           { opacity: 0.9; }
+  93%           { opacity: 0.95; }
 }
 
 /* Tram windows glow warm at night (interior lights). */
