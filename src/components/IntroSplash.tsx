@@ -21,6 +21,7 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
   const [ready, setReady] = useState(false);
   const [night, setNight] = useState(false);
   const [xmas, setXmas] = useState(false);
+  const [spring, setSpring] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 2200);
@@ -33,6 +34,17 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
     const xmasTimer = window.setTimeout(() => {
       if (!reduced) setXmas(true);
     }, 20000);
+    // 30s: roll the scene back to a brighter-than-bright daytime, swap the
+    // trees for cherry blossoms and break the tram for a quick stop. Night
+    // and xmas are cleared so their classes (and animations) get to fade
+    // out cleanly.
+    const springTimer = window.setTimeout(() => {
+      if (!reduced) {
+        setNight(false);
+        setXmas(false);
+        setSpring(true);
+      }
+    }, 30000);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -46,6 +58,7 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
       clearTimeout(t);
       clearTimeout(nightTimer);
       clearTimeout(xmasTimer);
+      clearTimeout(springTimer);
       window.removeEventListener("keydown", onKey);
     };
   }, [ready, onEnter]);
@@ -54,7 +67,9 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
     <div
       className={`rr-splash ${night ? "rr-splash-night" : ""} ${
         xmas ? "rr-splash-xmas" : ""
-      } ${exiting ? "rr-splash-exit" : ""}`}
+      } ${spring ? "rr-splash-spring" : ""} ${
+        exiting ? "rr-splash-exit" : ""
+      }`}
       role="dialog"
       aria-label="Risk Robin"
       onClick={() => {
@@ -65,8 +80,10 @@ export default function IntroSplash({ onEnter, exiting = false }: Props) {
 
       <div className="rr-splash-sky" aria-hidden="true" />
       <div className="rr-xmas-sky" aria-hidden="true" />
+      <div className="rr-spring-sun" aria-hidden="true" />
       <NightEasterEgg />
       <ChristmasEasterEgg />
+      <SpringEasterEgg />
 
       {/* Drifting clouds */}
       <div className="rr-cloud rr-cloud-1" aria-hidden="true" />
@@ -458,6 +475,73 @@ function ChristmasEasterEgg() {
 }
 
 /* ------------------------------------------------------------------------ */
+/* Spring easter egg — 30s in. Brighter daylight, cherry-blossom canopies,    */
+/* petals blowing in a leftward breeze, tram parks and lets tourists off.    */
+/* ------------------------------------------------------------------------ */
+
+function SpringEasterEgg() {
+  // Deterministic petal layout so positions stay put across re-renders, but
+  // still feel scattered. Each petal gets its own size, sway, tumble speed
+  // and pink shade so the air reads as a beautiful, varied breeze.
+  const petals = useMemo(() => {
+    let s = 0x4a7b3c91;
+    const rand = () => {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      return s / 0xffffffff;
+    };
+    // Petals come in four cherry-blossom shades — soft, off-white pinks
+    // through a deeper rose. Each petal also picks a contrasting darker
+    // tip so the gradient feels like a real petal catching light.
+    const palette = [
+      { base: "#ffeaf2", tip: "#ffc1d8" },
+      { base: "#ffd6e3", tip: "#ff9bc0" },
+      { base: "#ffc1d3", tip: "#f487b3" },
+      { base: "#fff5f9", tip: "#ffd2e0" },
+    ];
+    return Array.from({ length: 90 }, () => {
+      const shade = palette[Math.floor(rand() * palette.length)];
+      return {
+        x: -8 + rand() * 116,
+        delay: -rand() * 16,
+        dur: 11 + rand() * 12,
+        size: 0.55 + rand() * 1.05,
+        sway: 30 + rand() * 90,
+        spin: 1 + Math.floor(rand() * 3),
+        startRot: rand() * 360,
+        startTilt: -25 + rand() * 50,
+        base: shade.base,
+        tip: shade.tip,
+      };
+    });
+  }, []);
+
+  return (
+    <div className="rr-spring-scene" aria-hidden="true">
+      <div className="rr-petals">
+        {petals.map((p, i) => (
+          <span
+            key={`petal-${i}`}
+            className="rr-petal"
+            style={
+              {
+                left: `${p.x}%`,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.dur}s`,
+                background: `linear-gradient(${135 + p.startTilt}deg, ${p.base} 0%, ${p.tip} 100%)`,
+                "--petal-size": p.size,
+                "--petal-sway": `${p.sway}px`,
+                "--petal-spin": p.spin,
+                "--petal-rot": `${p.startRot}deg`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
 /* Edinburgh skyline                                                         */
 /* ------------------------------------------------------------------------ */
 
@@ -765,18 +849,145 @@ function EdinburghSkyline() {
 
       {/* Foreground trees + lamp posts */}
       <g className="rr-layer rr-layer-fg">
-        {/* Trees */}
+        {/* Trees — each tree carries two stacked canopies. The green
+            summer foliage is the default; the cherry-blossom canopy hides
+            behind it and only swaps in once the spring easter egg fires.
+            The blossom canopy is intentionally taller and more elaborate
+            than the green tree because spring is the showpiece moment.
+            "spring" entries are only ever painted as cherry blossoms — no
+            green version exists for them so the row of pink only appears
+            in spring. */}
         {[
-          [320, 470, 1],
-          [480, 480, 0.9],
-          [950, 480, 1.1],
-          [1320, 480, 0.95],
-        ].map(([x, y, s], i) => (
-          <g key={`tree-${i}`} transform={`translate(${x},${y}) scale(${s})`}>
-            <rect x="-3" y="-6" width="6" height="22" fill="#6e4c2c" />
-            <circle cx="0" cy="-18" r="22" fill="#7FB93C" />
-            <circle cx="-12" cy="-10" r="14" fill="#9bc665" />
-            <circle cx="12" cy="-12" r="16" fill="#a8d075" />
+          { x: 320, y: 470, s: 1.6, key: "1", greenS: 1 },
+          { x: 520, y: 480, s: 1.45, key: "2", greenS: 0.9 },
+          { x: 700, y: 478, s: 1.55, key: "3s", springOnly: true },
+          { x: 950, y: 480, s: 1.7, key: "4", greenS: 1.1 },
+          { x: 1130, y: 478, s: 1.5, key: "5s", springOnly: true },
+          { x: 1320, y: 480, s: 1.55, key: "6", greenS: 0.95 },
+          { x: 1485, y: 482, s: 1.4, key: "7s", springOnly: true },
+        ].map((t) => (
+          <g
+            key={`tree-${t.key}`}
+            transform={`translate(${t.x},${t.y})`}
+          >
+            {/* Summer/green tree (existing look). Only rendered for the
+                trees that existed in the daytime scene; spring-only trees
+                skip this layer so the row of cherry blossoms reads as new
+                growth that only blooms in the spring stage. */}
+            {!t.springOnly && (
+              <g
+                className="rr-tree-green"
+                transform={`scale(${t.greenS ?? t.s})`}
+              >
+                <rect x="-3" y="-6" width="6" height="22" fill="#6e4c2c" />
+                <circle cx="0" cy="-18" r="22" fill="#7FB93C" />
+                <circle cx="-12" cy="-10" r="14" fill="#9bc665" />
+                <circle cx="12" cy="-12" r="16" fill="#a8d075" />
+              </g>
+            )}
+
+            {/* Cherry-blossom tree — slender branches show through layered
+                pink canopies. Three shades of pink stack so the canopy
+                feels fluffy and dimensional, with tiny pale highlights
+                acting as individual blossoms catching the sun. The outer
+                wrapper applies the per-tree scale via the SVG transform
+                attribute; the inner g is what the CSS animates (rotate
+                for sway, opacity for fade-in), so the two transforms
+                don't clobber each other. */}
+            <g transform={`scale(${t.s})`}>
+              <g
+                className={`rr-tree-blossom ${t.springOnly ? "rr-tree-spring-only" : ""}`}
+              >
+              {/* Main trunk + visible branches reaching out and up */}
+              <path
+                d="M -1 18 Q 0 8 0 -4 L 1 -12"
+                stroke="#5a3a22"
+                strokeWidth="3.8"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 0 -4 Q -10 -14 -22 -20"
+                stroke="#5a3a22"
+                strokeWidth="2.6"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 0 -4 Q 10 -14 22 -20"
+                stroke="#5a3a22"
+                strokeWidth="2.6"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 0 -12 Q -6 -22 -12 -34"
+                stroke="#5a3a22"
+                strokeWidth="2.2"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 0 -12 Q 6 -22 12 -34"
+                stroke="#5a3a22"
+                strokeWidth="2.2"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 0 -16 Q -1 -28 -3 -42"
+                stroke="#5a3a22"
+                strokeWidth="1.9"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 0 -16 Q 2 -28 5 -42"
+                stroke="#5a3a22"
+                strokeWidth="1.9"
+                fill="none"
+                strokeLinecap="round"
+              />
+
+              {/* Background fluffy darker-pink mass — the deep base layer
+                  that gives the canopy depth. */}
+              <ellipse cx="-20" cy="-20" rx="17" ry="14" fill="#df7ba3" opacity="0.86" />
+              <ellipse cx="20" cy="-22" rx="18" ry="15" fill="#df7ba3" opacity="0.86" />
+              <ellipse cx="-10" cy="-32" rx="15" ry="13" fill="#df7ba3" opacity="0.86" />
+              <ellipse cx="10" cy="-34" rx="15" ry="13" fill="#df7ba3" opacity="0.86" />
+              <ellipse cx="0" cy="-42" rx="13" ry="12" fill="#df7ba3" opacity="0.86" />
+
+              {/* Mid-tone canopy — the dominant pink */}
+              <ellipse cx="-15" cy="-17" rx="13" ry="11" fill="#f4a1bf" opacity="0.94" />
+              <ellipse cx="15" cy="-19" rx="13" ry="11" fill="#f4a1bf" opacity="0.94" />
+              <ellipse cx="-6" cy="-29" rx="12" ry="10" fill="#f4a1bf" opacity="0.94" />
+              <ellipse cx="7" cy="-30" rx="12" ry="10" fill="#f4a1bf" opacity="0.94" />
+              <ellipse cx="0" cy="-39" rx="10" ry="9" fill="#f4a1bf" opacity="0.94" />
+
+              {/* Light pink highlights on top — sun catching the topmost
+                  blossoms. */}
+              <ellipse cx="-11" cy="-13" rx="7" ry="5.5" fill="#ffd6e2" opacity="0.94" />
+              <ellipse cx="11" cy="-15" rx="7" ry="5.5" fill="#ffd6e2" opacity="0.94" />
+              <ellipse cx="-3" cy="-25" rx="6.5" ry="5.5" fill="#ffd6e2" opacity="0.94" />
+              <ellipse cx="5" cy="-26" rx="6.5" ry="5.5" fill="#ffd6e2" opacity="0.94" />
+              <ellipse cx="0" cy="-35" rx="6" ry="5" fill="#ffd6e2" opacity="0.94" />
+
+              {/* Individual blossom dots — tiny pale petals catching light */}
+              <circle cx="-15" cy="-19" r="1.8" fill="#fff5fa" />
+              <circle cx="15" cy="-19" r="1.8" fill="#fff5fa" />
+              <circle cx="-7" cy="-12" r="1.5" fill="#fff5fa" />
+              <circle cx="8" cy="-13" r="1.6" fill="#fff5fa" />
+              <circle cx="-8" cy="-32" r="1.6" fill="#fff5fa" />
+              <circle cx="8" cy="-32" r="1.6" fill="#fff5fa" />
+              <circle cx="0" cy="-42" r="1.6" fill="#fff5fa" />
+              <circle cx="-3" cy="-22" r="1.4" fill="#fff5fa" />
+              <circle cx="4" cy="-24" r="1.4" fill="#fff5fa" />
+              <circle cx="-12" cy="-26" r="1.4" fill="#fff5fa" />
+              <circle cx="12" cy="-26" r="1.4" fill="#fff5fa" />
+              <circle cx="-4" cy="-37" r="1.3" fill="#fff5fa" />
+              <circle cx="4" cy="-37" r="1.3" fill="#fff5fa" />
+              </g>
+            </g>
           </g>
         ))}
         {/* Lamp posts */}
@@ -808,9 +1019,63 @@ function EdinburghSkyline() {
           <rect x="62" y="-22" width="24" height="14" rx="2" fill="#d5e5f0" />
           <rect x="90" y="-22" width="24" height="14" rx="2" fill="#d5e5f0" />
           <rect x="118" y="-22" width="24" height="14" rx="2" fill="#d5e5f0" />
+          {/* Door split — sits flush with the tram body, opens in spring */}
+          <g className="rr-tram-door">
+            <rect
+              className="rr-tram-door-left"
+              x="72"
+              y="-30"
+              width="8"
+              height="32"
+              fill="#5a1924"
+              rx="1"
+            />
+            <rect
+              className="rr-tram-door-right"
+              x="80"
+              y="-30"
+              width="8"
+              height="32"
+              fill="#5a1924"
+              rx="1"
+            />
+          </g>
           <circle cx="22" cy="6" r="6" fill="#1f1812" />
           <circle cx="138" cy="6" r="6" fill="#1f1812" />
         </g>
+
+        {/* Tourists who only disembark during the spring easter egg. They
+            sit hidden behind the parked tram (zero opacity), then walk
+            away in different directions with a small vertical bob to
+            suggest walking. Their size is roughly two-thirds of the tram
+            body so they look in scale with the tram. */}
+        <g className="rr-tourists">
+          {[
+            { id: 1, coat: "#c0392b" },
+            { id: 2, coat: "#2a6fbf" },
+            { id: 3, coat: "#1f7a52" },
+          ].map((t) => (
+            <g
+              key={`tourist-${t.id}`}
+              className={`rr-tourist rr-tourist-${t.id}`}
+            >
+              <g className="rr-tourist-bob">
+                <circle cx="0" cy="-28" r="5" fill="#f0c896" />
+                <rect
+                  x="-5"
+                  y="-23"
+                  width="10"
+                  height="15"
+                  rx="2"
+                  fill={t.coat}
+                />
+                <rect x="-4.4" y="-8" width="3.2" height="8" fill="#2a2a2a" />
+                <rect x="1.2" y="-8" width="3.2" height="8" fill="#2a2a2a" />
+              </g>
+            </g>
+          ))}
+        </g>
+
         {/* Pavement strip across the whole scene */}
         <rect x="0" y="468" width="1600" height="4" fill="#b8a98c" />
       </g>
@@ -918,6 +1183,10 @@ const splashCss = `
   transition: filter 3.2s ease-in-out;
 }
 
+.rr-skyline rect[fill="#3b5566"],
+.rr-skyline rect[fill="#2a3a4a"] {
+  transition: fill 2.4s ease-in-out, opacity 2.4s ease-in-out;
+}
 .rr-splash-night .rr-skyline rect[fill="#3b5566"],
 .rr-splash-night .rr-skyline rect[fill="#2a3a4a"] {
   fill: #ffd36b;
@@ -953,6 +1222,9 @@ const splashCss = `
 }
 
 /* Tram windows glow warm at night (interior lights). */
+.rr-skyline rect[fill="#d5e5f0"] {
+  transition: fill 2.4s ease-in-out;
+}
 .rr-splash-night .rr-skyline rect[fill="#d5e5f0"] {
   fill: #ffe39c;
 }
@@ -1060,6 +1332,247 @@ const splashCss = `
 .rr-splash-xmas .rr-night-sky {
   opacity: 0;
   transition: opacity 3s ease-in-out;
+}
+
+/* ---- 30s easter egg: spring returns, brighter than ever, cherry
+   blossoms bloom on every foreground tree and petals drift on the
+   breeze while the tram pulls up and tourists disembark. ---- */
+
+/* A more saturated daytime sky for the spring stage. The base sky still
+   sits underneath; this overlay is what reads as "brighter than morning". */
+.rr-splash-sky {
+  transition: opacity 2.5s ease-in-out;
+}
+.rr-splash-spring .rr-splash-sky {
+  background:
+    radial-gradient(1100px 640px at 18% -8%, #fff5d4 0%, transparent 58%),
+    radial-gradient(900px 520px at 110% 6%, #ffd6ea 0%, transparent 55%),
+    linear-gradient(180deg, #b8e1f4 0%, #fdedce 70%, #ffdcc6 100%);
+  transition: background 2.6s ease-in-out;
+}
+
+/* Sun — only present in spring, sits over the skyline left of centre. */
+.rr-spring-sun {
+  position: absolute;
+  top: clamp(28px, 7vh, 80px);
+  left: clamp(40px, 11vw, 180px);
+  width: clamp(72px, 9vw, 124px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, #fff9b8 0%, #ffd35a 38%, rgba(255, 211, 90, 0) 72%);
+  box-shadow: 0 0 80px rgba(255, 211, 90, 0.55);
+  opacity: 0;
+  transform: scale(0.55);
+  transition: opacity 2.6s ease-in-out, transform 2.6s cubic-bezier(.34, 1.4, .55, 1);
+  z-index: 1;
+  pointer-events: none;
+}
+.rr-splash-spring .rr-spring-sun {
+  opacity: 1;
+  transform: scale(1);
+  animation: rrSunPulse 8s ease-in-out 2.6s infinite;
+}
+@keyframes rrSunPulse {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50%      { filter: brightness(1.08) saturate(1.05); }
+}
+
+/* The skyline gets a touch brighter once spring kicks in — Edinburgh on
+   one of those rare days where the sun really shows up. */
+.rr-skyline {
+  transition: filter 3s ease-in-out;
+}
+.rr-splash-spring .rr-skyline {
+  filter: brightness(1.06) saturate(1.08);
+}
+
+/* Trees: cross-fade between the green canopy and the cherry-blossom
+   canopy. The blossom group is hidden by default and only appears in
+   spring, with a gentle breeze sway once it lands. */
+.rr-tree-green {
+  opacity: 1;
+  transition: opacity 2.4s ease-in-out;
+}
+.rr-tree-blossom {
+  opacity: 0;
+  transform-origin: 0 16px;
+  transition: opacity 2.6s ease-in-out 0.3s;
+}
+.rr-splash-spring .rr-tree-green { opacity: 0; }
+.rr-splash-spring .rr-tree-blossom {
+  opacity: 1;
+  animation: rrBlossomSway 5.2s ease-in-out 1.6s infinite;
+}
+@keyframes rrBlossomSway {
+  0%, 100% { transform: rotate(-0.7deg); }
+  50%      { transform: rotate(0.7deg); }
+}
+
+/* Petals — sit in their own absolute layer above the skyline, drift on a
+   leftward breeze, tumble in three dimensions (faked with rotation +
+   scaleX), and re-loop continuously while spring is active. */
+.rr-spring-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 2.4s ease-in-out;
+}
+.rr-splash-spring .rr-spring-scene { opacity: 1; }
+
+.rr-petals {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.rr-petal {
+  position: absolute;
+  top: -8%;
+  width: calc(9px * var(--petal-size, 1));
+  height: calc(13px * var(--petal-size, 1));
+  border-radius: 100% 0 100% 0 / 80% 20% 80% 20%;
+  opacity: 0;
+  filter: drop-shadow(0 1px 2px rgba(190, 90, 130, 0.18));
+  transform: rotate(var(--petal-rot, 0deg));
+  animation-name: rrPetalDrift;
+  animation-timing-function: cubic-bezier(.4, .14, .55, .9);
+  animation-iteration-count: infinite;
+  animation-play-state: paused;
+}
+.rr-splash-spring .rr-petal { animation-play-state: running; }
+
+/* The drift combines a falling motion with a constant leftward wind and a
+   per-petal sway, plus a tumbling spin. The result is petals that look
+   like they're being blown across the scene by a soft breeze, each one
+   tracing a slightly different arc. */
+@keyframes rrPetalDrift {
+  0% {
+    opacity: 0;
+    transform: translate(0, -6vh)
+               rotate(var(--petal-rot, 0deg));
+  }
+  6% { opacity: 0.95; }
+  25% {
+    transform: translate(
+                 calc(var(--petal-sway, 40px) * -0.5 - 4vw),
+                 22vh
+               )
+               rotate(calc(var(--petal-rot, 0deg) + var(--petal-spin, 1) * 110deg))
+               scaleX(0.92);
+  }
+  50% {
+    transform: translate(
+                 calc(var(--petal-sway, 40px) * 0.7 - 9vw),
+                 50vh
+               )
+               rotate(calc(var(--petal-rot, 0deg) + var(--petal-spin, 1) * 240deg))
+               scaleX(1.05);
+  }
+  75% {
+    transform: translate(
+                 calc(var(--petal-sway, 40px) * -0.3 - 14vw),
+                 80vh
+               )
+               rotate(calc(var(--petal-rot, 0deg) + var(--petal-spin, 1) * 380deg))
+               scaleX(0.88);
+  }
+  92% { opacity: 0.85; }
+  100% {
+    opacity: 0;
+    transform: translate(
+                 calc(var(--petal-sway, 40px) * 0.4 - 20vw),
+                 116vh
+               )
+               rotate(calc(var(--petal-rot, 0deg) + var(--petal-spin, 1) * 520deg))
+               scaleX(0.95);
+  }
+}
+
+/* Tram: in spring it rolls in once more from the right and parks just
+   left of centre. The "forwards" fill keeps it parked while the tourists
+   get out, and the existing infinite tram animation is cancelled because
+   the spring rule has higher specificity. */
+.rr-splash-spring .rr-tram {
+  animation: rrTramArrive 3s 0.4s cubic-bezier(.22, .7, .25, 1) forwards;
+}
+@keyframes rrTramArrive {
+  0%   { transform: translate(1700px, 446px); }
+  85%  { transform: translate(742px, 446px); }
+  100% { transform: translate(720px, 446px); }
+}
+
+/* Doors stay closed by default; in spring, after the tram parks, they
+   slide open to let the tourists out. */
+.rr-tram-door-left,
+.rr-tram-door-right {
+  transition: transform 0s;
+}
+.rr-splash-spring .rr-tram-door-left {
+  animation: rrDoorLeft 0.7s 3.5s ease-out forwards;
+}
+.rr-splash-spring .rr-tram-door-right {
+  animation: rrDoorRight 0.7s 3.5s ease-out forwards;
+}
+@keyframes rrDoorLeft  { to { transform: translateX(-6px); } }
+@keyframes rrDoorRight { to { transform: translateX(6px); } }
+
+/* Tourists are hidden by default. In spring each one fades in at the
+   tram's door, then walks away with a small vertical bob. */
+.rr-tourist {
+  opacity: 0;
+  transform: translate(820px, 470px);
+  pointer-events: none;
+}
+.rr-tourist-bob { transform-origin: center bottom; }
+
+.rr-splash-spring .rr-tourist-1 {
+  animation: rrWalkLeft 7s 3.9s cubic-bezier(.34, .04, .6, .98) forwards;
+}
+.rr-splash-spring .rr-tourist-2 {
+  animation: rrWalkRight 7s 4.3s cubic-bezier(.34, .04, .6, .98) forwards;
+}
+.rr-splash-spring .rr-tourist-3 {
+  animation: rrWalkLeftFar 7.6s 4.7s cubic-bezier(.34, .04, .6, .98) forwards;
+}
+.rr-splash-spring .rr-tourist .rr-tourist-bob {
+  animation: rrTouristBob 0.46s 3.9s linear infinite;
+}
+
+@keyframes rrWalkLeft {
+  0%   { opacity: 0; transform: translate(802px, 470px); }
+  18%  { opacity: 1; transform: translate(782px, 470px); }
+  100% { opacity: 1; transform: translate(530px, 470px); }
+}
+@keyframes rrWalkRight {
+  0%   { opacity: 0; transform: translate(812px, 470px); }
+  18%  { opacity: 1; transform: translate(832px, 470px); }
+  100% { opacity: 1; transform: translate(1090px, 470px); }
+}
+@keyframes rrWalkLeftFar {
+  0%   { opacity: 0; transform: translate(798px, 470px); }
+  18%  { opacity: 1; transform: translate(776px, 470px); }
+  100% { opacity: 1; transform: translate(360px, 470px); }
+}
+@keyframes rrTouristBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1.4px); }
+}
+
+/* In spring the night-sky and Christmas overlays must clear all the way
+   out, even though their state flags are already false. The base classes
+   already fade them; this just makes sure pesky lingering filters and
+   the headlight don't bleed into the bright daytime scene. */
+.rr-splash-spring .rr-night-sky,
+.rr-splash-spring .rr-fireworks,
+.rr-splash-spring .rr-stars,
+.rr-splash-spring .rr-moon,
+.rr-splash-spring .rr-xmas-scene,
+.rr-splash-spring .rr-xmas-sky,
+.rr-splash-spring .rr-headlight {
+  opacity: 0 !important;
+  transition: opacity 2.4s ease-in-out;
 }
 
 /* Tram headlight — hidden in day, fades in with a brief flicker at night. */
@@ -1456,12 +1969,19 @@ const splashCss = `
   .rr-flag,
   .rr-tram,
   .rr-letter,
-  .rr-enter {
+  .rr-enter,
+  .rr-petal,
+  .rr-tree-blossom,
+  .rr-tourist,
+  .rr-tourist-bob {
     animation: none !important;
     transform: none !important;
     opacity: 1 !important;
   }
   .rr-cloud { display: none; }
   .rr-plane-track { display: none; }
+  .rr-petals { display: none; }
+  .rr-tourists { display: none; }
+  .rr-tree-blossom { display: none; }
 }
 `;
