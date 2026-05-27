@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleFollowUp } from "../server/aiHandlers";
-import { runHandler } from "./_lib";
+import { handleFollowUp } from "../server/aiHandlers.js";
+import { runHandler } from "./_lib.js";
 
 export const config = { maxDuration: 30 };
 

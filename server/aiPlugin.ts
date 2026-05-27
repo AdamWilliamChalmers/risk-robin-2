@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from "vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { DEFAULT_MODEL, HANDLERS, type Env } from "./aiHandlers";
+import { DEFAULT_MODEL, HANDLERS, type Env } from "./aiHandlers.js";
 
 /**
  * Dev-only Vite plugin that mounts the AI proxy under `vite dev`.

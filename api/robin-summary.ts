@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleRobinSummary } from "../server/aiHandlers";
-import { runHandler } from "./_lib";
+import { handleRobinSummary } from "../server/aiHandlers.js";
+import { runHandler } from "./_lib.js";
 
 export const config = { maxDuration: 30 };
 

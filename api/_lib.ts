@@ -14,7 +14,7 @@
  * with the rest of the codebase.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { envFromProcess, type Handler } from "../server/aiHandlers";
+import { envFromProcess, type Handler } from "../server/aiHandlers.js";
 
 /**
  * Run one of the shared handlers, translating its result/error into an HTTP
