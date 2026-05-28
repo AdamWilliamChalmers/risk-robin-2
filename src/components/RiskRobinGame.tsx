@@ -122,6 +122,25 @@ export default function RiskRobinGame() {
     };
   }, [s.stage, s.currentContext?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Centre the player's view on whatever Robin is talking about right now.
+  // We re-tested with users who skipped straight to their hand and ignored the
+  // locals' perspectives; pulling the relevant region to the centre of the
+  // viewport on stage entry makes the two-act flow (read locals → choose
+  // impact) physically obvious.
+  useEffect(() => {
+    let area: string | null = null;
+    if (s.stage === "ai_discussion") area = "ai_panel";
+    else if (s.stage === "choose_impact") area = "impact_hand";
+    if (!area) return;
+    const el = document.querySelector<HTMLElement>(`[data-area="${area}"]`);
+    if (!el) return;
+    // Small delay so any layout/dim-class changes settle before we measure.
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [s.stage]);
+
   // Upgrade Robin's templated case-study summary once the round is committed.
   // We fire on update_board entry (right after CONFIRM_CLASSIFICATION) so the
   // summary is upgraded before the player even sees the final report.
@@ -276,14 +295,33 @@ export default function RiskRobinGame() {
                 </section>
               </div>
 
-              {/* AI analysts */}
+              {/* AI analysts. During `ai_discussion` we lift this panel above
+                  a full-page dim overlay so the locals' perspectives are the
+                  only thing readable on the page — players ignored them when
+                  the hand was visible at the same time. The lift class adds a
+                  brighter ring + pulse; the overlay is rendered below. */}
               {s.aiAnalystResponses.length > 0 &&
                 aiPanelVisible(s.stage) && (
-                  <div className={isDimmed(s.stage, "ai_panel") ? "dimmed" : ""}>
+                  <div
+                    className={`${
+                      isDimmed(s.stage, "ai_panel") ? "dimmed" : ""
+                    } ${
+                      s.stage === "ai_discussion" ? "spotlight-lift" : ""
+                    }`}
+                  >
                     <AIAnalystPanel
                       suggestions={s.aiAnalystResponses}
                       hand={s.playerHand}
-                      highlighted={g.isHighlighted("ai_panel")}
+                      // Suppress the per-panel `highlighted` ring during
+                      // `ai_discussion` — the outer .spotlight-lift wrapper
+                      // already provides a more prominent ring, and stacking
+                      // both produces a noisy double-pulse.
+                      highlighted={
+                        s.stage === "ai_discussion"
+                          ? false
+                          : g.isHighlighted("ai_panel")
+                      }
+                      pulse={s.stage === "ai_discussion"}
                     />
                   </div>
                 )}
@@ -379,6 +417,13 @@ export default function RiskRobinGame() {
         )}
       </main>
 
+      {/* Dim overlay for the "locals weigh in" stage. Sits above the page
+          content (z-20) but below the lifted AI panel (z-25) and the Robin
+          dock / CTA bar (z-30) so guidance + advancement remain bright and
+          clickable. Click-blocking by design — the only way out is the
+          orange "Choose from my hand →" button. */}
+      {s.stage === "ai_discussion" && <div className="spotlight-overlay no-print" />}
+
       {showDocks && (
         <>
           <RobinGuide state={s} highlighted={g.isHighlighted("robin")} />
@@ -443,7 +488,7 @@ function isDimmed(stage: Stage, area: string): boolean {
     welcome: [],
     round_intro: ALL_NON_BG,
     reveal_context: ALL_NON_BG.filter((a) => a !== "context"),
-    ai_discussion: ["evidence_input", "follow_up", "ratings", "classify", "summary"],
+    ai_discussion: ["impact_hand", "evidence_input", "follow_up", "ratings", "classify", "summary"],
     choose_impact: ["evidence_input", "follow_up", "ratings", "classify", "summary"],
     collect_evidence: ["ai_panel", "impact_hand", "follow_up", "ratings", "classify", "summary"],
     follow_up: ["ai_panel", "impact_hand", "evidence_input", "ratings", "classify", "summary"],

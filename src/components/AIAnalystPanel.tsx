@@ -11,12 +11,17 @@ type Props = {
   suggestions: AISuggestion[];
   hand: ImpactCard[];
   highlighted: boolean;
+  /** When true, each persona card gets a one-shot pulse on mount. Used while
+   *  we're in the "locals weigh in" spotlight to draw the eye to each
+   *  perspective in turn. */
+  pulse?: boolean;
 };
 
 export default function AIAnalystPanel({
   suggestions,
   hand,
   highlighted,
+  pulse = false,
 }: Props) {
   const byId = new Map(hand.map((c) => [c.id, c]));
   const overrides = usePersonaOverrides();
@@ -78,6 +83,7 @@ export default function AIAnalystPanel({
               voice={s.voice as AIVoice}
               reason={s.reason}
               cards={cards}
+              pulse={pulse}
             />
           );
         })}
@@ -95,10 +101,12 @@ function PersonaSuggestionCard({
   voice,
   reason,
   cards,
+  pulse,
 }: {
   voice: AIVoice;
   reason: string;
   cards: ImpactCard[];
+  pulse?: boolean;
 }) {
   const p = useResolvedPersona(voice);
   const headlineName = p?.name ?? voice;
@@ -110,7 +118,9 @@ function PersonaSuggestionCard({
 
   return (
     <article
-      className="rounded-2xl bg-pastel-cream p-4 shadow-sm animate-fadeIn"
+      className={`rounded-2xl bg-pastel-cream p-4 shadow-sm animate-fadeIn ${
+        pulse ? "persona-pulse" : ""
+      }`}
       style={{ borderTop: `4px solid ${accent}` }}
     >
       <div className="flex items-start gap-3 mb-2">

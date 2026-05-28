@@ -103,12 +103,12 @@ function robinLine(s: GameState): string {
       return `Round ${s.roundNumber} of ${s.totalRounds}. Click the orange "Draw context" button below to deal this round's Context Card.`;
     case "reveal_context":
       return s.currentContext
-        ? `Here's the context: "${s.currentContext.title}". Take a moment to read it — in a second I'll bring in your three locals to suggest cards from your hand.`
+        ? `The context is "${s.currentContext.title}". Let's see what the locals have to say…`
         : "Let's see what comes up next.";
     case "ai_discussion":
-      return "Your three locals have each picked cards from your hand for this context. Skim what they say — they often disagree, and that's the point. When you're ready, click \u201cChoose from my hand \u2192\u201d below to make your pick.";
+      return "Take a moment with your three locals — read each one carefully. They often disagree, and that's the point: notice whose life weighs differently here. When you're ready to give *your* perspective, click \u201cChoose from my hand \u2192\u201d below.";
     case "choose_impact":
-      return "Now your turn: pick one Impact Card from your hand below that best fits this context. Don't see one that fits? Click the \u2735 Wild Card on the right to write your own.";
+      return "Your turn — pick one Impact Card. You can choose one your locals supported, or one nobody picked. Look at the category icons on each card: they show which sustainability dimensions are at stake, and the trade-offs you're making. Be ready to justify your choice. Don't see one that fits? Use the \u2735 Wild Card on the right to write your own.";
     case "collect_evidence":
       return "Now the important part: type a concrete real example into the box for why this impact matters — a specific place, a moment, a person. Hit \u201cSubmit evidence \u2192\u201d when you're done. The more grounded, the more weight it carries.";
     case "follow_up":

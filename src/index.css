@@ -59,6 +59,86 @@ h1, h2, h3, h4 {
   50%      { box-shadow: 0 0 0 10px rgba(210, 75, 37, 0), 0 0 28px rgba(210, 75, 37, 0.55); }
 }
 
+/* ---------- Locals "spotlight" treatment ----------
+   Used during the `ai_discussion` stage to force the player's attention onto
+   the three locals' perspectives BEFORE the impact hand becomes the focus.
+
+   .spotlight-overlay  full-screen dim painted between the page content
+                       (z-auto / 0) and the elements we lift above it.
+                       Stops short of the bottom dock area so Robin's coach
+                       and the orange CTA stay bright and clickable.
+   .spotlight-lift     lifts the target above the overlay and gives it an
+                       on-entry pulse so it reads as the single live thing
+                       on the page.
+   .persona-pulse      a short, one-shot bump on each persona's card so the
+                       eye is drawn to the arguments as they arrive. */
+.spotlight-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Leave the bottom ~12rem free so the fixed Robin dock + GameControls
+     bar remain visually bright above the dim. They sit at z-30 anyway, but
+     not dimming them at all keeps the contrast crisp. */
+  bottom: 11rem;
+  z-index: 20;
+  background: rgba(20, 12, 6, 0.55);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  pointer-events: auto;
+  animation: spotlightFadeIn 280ms ease-out;
+}
+
+@keyframes spotlightFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.spotlight-lift {
+  position: relative;
+  z-index: 25;
+  border-radius: 24px;
+  animation: spotlightLiftIn 420ms cubic-bezier(0.22, 1.05, 0.36, 1.02);
+}
+.spotlight-lift::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 26px;
+  pointer-events: none;
+  border: 3px solid rgba(210, 75, 37, 0.85);
+  box-shadow: 0 0 36px rgba(210, 75, 37, 0.55);
+  animation: pulseRing 2.4s ease-out infinite;
+}
+
+@keyframes spotlightLiftIn {
+  0%   { transform: scale(0.985); }
+  60%  { transform: scale(1.012); }
+  100% { transform: scale(1); }
+}
+
+/* Compose with the existing `animate-fadeIn` utility on the persona cards.
+   Both rules target the `animation` shorthand, so we re-declare fadeIn here
+   to keep it firing alongside the pulse instead of being overridden. */
+.persona-pulse {
+  animation:
+    fadeIn 400ms ease-out both,
+    personaPulse 1.6s ease-out 0s 2;
+}
+
+@keyframes personaPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(210, 75, 37, 0); }
+  35%  { box-shadow: 0 0 0 8px rgba(210, 75, 37, 0.20); }
+  100% { box-shadow: 0 0 0 0 rgba(210, 75, 37, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-overlay { animation: none; }
+  .spotlight-lift,
+  .spotlight-lift::after,
+  .persona-pulse { animation: none !important; }
+}
+
 /* ---------- Robin FAB attention treatments ----------
    Two layered effects on the Chief Analyst Robin dock:
    1. `.robin-fab` — a gentle, always-on warm orange glow. Subtle enough not
