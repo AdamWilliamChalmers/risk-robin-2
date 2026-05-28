@@ -59,6 +59,7 @@ export default function FollowUpInput({ question, highlighted, onSubmit, onSkip,
             Skip
           </button>
           <button
+            data-cta="submit"
             className="btn-primary disabled:opacity-40"
             disabled={text.trim().length === 0}
             onClick={() => onSubmit(text.trim())}

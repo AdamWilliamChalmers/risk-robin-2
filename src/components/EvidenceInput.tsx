@@ -129,6 +129,7 @@ export default function EvidenceInput({
         </button>
         <button
           disabled={!canSubmit}
+          data-cta="submit"
           className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={() => onSubmit(evidence.trim())}
         >

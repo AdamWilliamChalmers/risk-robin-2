@@ -77,10 +77,12 @@ h1, h2, h3, h4 {
   top: 0;
   left: 0;
   right: 0;
-  /* Leave the bottom ~12rem free so the fixed Robin dock + GameControls
+  /* Leave the bottom ~14rem free so the fixed Robin dock + GameControls
      bar remain visually bright above the dim. They sit at z-30 anyway, but
-     not dimming them at all keeps the contrast crisp. */
-  bottom: 11rem;
+     not dimming them at all keeps the contrast crisp. The clearance was
+     bumped from 11rem to 14rem when the Robin dock was enlarged for
+     visibility (see RobinGuide.tsx). */
+  bottom: 14rem;
   z-index: 20;
   background: rgba(20, 12, 6, 0.55);
   backdrop-filter: blur(1.5px);
@@ -132,11 +134,34 @@ h1, h2, h3, h4 {
   100% { box-shadow: 0 0 0 0 rgba(210, 75, 37, 0); }
 }
 
+/* Streaming caret for the locals' "is typing" effect. The colour is set
+   inline (per persona's accent) via the `background` style; this rule only
+   sizes and blinks it. Kept narrow so it reads as a generation cursor
+   rather than a hard punctuation mark. */
+.typing-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  border-radius: 1px;
+  animation: typingCaretBlink 0.85s steps(1, end) infinite;
+}
+
+@keyframes typingCaretBlink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spotlight-overlay { animation: none; }
   .spotlight-lift,
   .spotlight-lift::after,
-  .persona-pulse { animation: none !important; }
+  .persona-pulse,
+  .typing-caret,
+  .btn-primary,
+  .btn-primary-jolt { animation: none !important; }
+  .typing-caret { display: none; }
 }
 
 /* ---------- Robin FAB attention treatments ----------
@@ -210,9 +235,66 @@ h1, h2, h3, h4 {
 .btn {
   @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition-all;
 }
+/* The primary "Next" CTA. This is the single most important visual on the
+   page during play — the user tests showed people losing track of where to
+   click, so the button is intentionally large, bold, and visually warm with
+   an always-on tinted glow. Used by both the bottom dock and every in-panel
+   submit (EvidenceInput, RatingQuestions, etc.), so all "advance the game"
+   actions share one consistent look. */
 .btn-primary {
-  @apply btn bg-robinOrange text-white hover:brightness-110 active:scale-[0.98] shadow-md;
+  @apply btn bg-robinOrange text-white hover:brightness-110 active:scale-[0.98];
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0.85rem 1.6rem;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 14px 26px -10px rgba(210, 75, 37, 0.55),
+    0 0 0 0 rgba(210, 75, 37, 0);
+  animation: btnPrimaryEnter 520ms cubic-bezier(0.22, 1.2, 0.36, 1.02) both;
 }
+.btn-primary:disabled {
+  animation: none;
+}
+
+/* One-shot attention pulse. Adding this class (and forcing a reflow to
+   restart the keyframes) re-fires the entrance animation. Used by the dock
+   "↓ Submit below" pointer to grab the in-panel button when clicked. */
+.btn-primary-jolt {
+  animation: btnPrimaryEnter 520ms cubic-bezier(0.22, 1.2, 0.36, 1.02) both !important;
+}
+
+@keyframes btnPrimaryEnter {
+  0%   { transform: scale(0.92);
+         box-shadow:
+           0 14px 26px -10px rgba(210, 75, 37, 0.55),
+           0 0 0 0 rgba(210, 75, 37, 0.55); }
+  55%  { transform: scale(1.04);
+         box-shadow:
+           0 14px 26px -10px rgba(210, 75, 37, 0.55),
+           0 0 0 14px rgba(210, 75, 37, 0); }
+  100% { transform: scale(1);
+         box-shadow:
+           0 14px 26px -10px rgba(210, 75, 37, 0.55),
+           0 0 0 0 rgba(210, 75, 37, 0); }
+}
+
+/* Softer companion CTA shown on stages where the real submit lives inside
+   a panel above (EvidenceInput, FollowUpInput, RatingQuestions, etc.).
+   Reads as a "look up — the orange button is in the panel" hint without
+   competing with the real .btn-primary for attention. Clicking scrolls to
+   the in-panel submit and re-fires its entrance pulse. */
+.btn-pointer {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all bg-white text-robinOrange;
+  font-size: 15px;
+  padding: 0.75rem 1.25rem;
+  border: 2px solid rgba(210, 75, 37, 0.6);
+  box-shadow: 0 6px 18px -8px rgba(210, 75, 37, 0.4);
+}
+.btn-pointer:hover {
+  background: rgba(210, 75, 37, 0.07);
+  border-color: rgba(210, 75, 37, 0.9);
+}
+
 .btn-ghost {
   @apply btn bg-white/70 backdrop-blur text-stone-800 hover:bg-white;
   border: 1px solid rgba(0,0,0,0.06);

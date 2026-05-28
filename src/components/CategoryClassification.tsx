@@ -110,6 +110,7 @@ export default function CategoryClassification({
 
       <div className="flex justify-end mt-4">
         <button
+          data-cta="submit"
           className="btn-primary disabled:opacity-40"
           disabled={!ready}
           onClick={onConfirm}

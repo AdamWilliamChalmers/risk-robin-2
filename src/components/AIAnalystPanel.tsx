@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import type { AISuggestion, AIVoice } from "../game/types";
 import type { ImpactCard } from "../data/impactCards";
 import { PERSONAS } from "../game/personas";
@@ -6,6 +7,17 @@ import {
   usePersonaOverrides,
 } from "../game/personaNamesContext";
 import InfoChip from "./InfoChip";
+
+/** Per-token interval for the streaming "is typing" effect on each persona's
+ *  reason. A reason of ~50 words has ~100 word+whitespace tokens, so 22ms gives
+ *  a snappy ~2s reveal — long enough to read like a live generation, short
+ *  enough that it doesn't hold the player up. */
+const TYPING_INTERVAL_MS = 22;
+
+/** Stagger between personas so the three feel like three independent agents
+ *  thinking aloud, not a simultaneous chorus. ~350ms between starts means
+ *  persona 2 is still typing when persona 1 finishes a short reason. */
+const PERSONA_STAGGER_MS = 350;
 
 type Props = {
   suggestions: AISuggestion[];
@@ -73,7 +85,7 @@ export default function AIAnalystPanel({
         </p>
       </header>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {suggestions.map((s) => {
+        {suggestions.map((s, idx) => {
           const cards = s.recommendedImpactIds
             .map((id) => byId.get(id))
             .filter((c): c is ImpactCard => !!c);
@@ -84,6 +96,7 @@ export default function AIAnalystPanel({
               reason={s.reason}
               cards={cards}
               pulse={pulse}
+              streamDelayMs={idx * PERSONA_STAGGER_MS}
             />
           );
         })}
@@ -102,11 +115,16 @@ function PersonaSuggestionCard({
   reason,
   cards,
   pulse,
+  streamDelayMs = 0,
 }: {
   voice: AIVoice;
   reason: string;
   cards: ImpactCard[];
   pulse?: boolean;
+  /** Delay before this persona's reason starts streaming. Used to stagger the
+   *  three locals so each feels like an independent live agent rather than a
+   *  synchronised chorus. */
+  streamDelayMs?: number;
 }) {
   const p = useResolvedPersona(voice);
   const headlineName = p?.name ?? voice;
@@ -115,6 +133,12 @@ function PersonaSuggestionCard({
   const emoji = p?.emoji ?? "💬";
   const perspective = p?.perspective ?? voice;
   const shortName = p?.shortName ?? voice;
+
+  const { shown, done } = useTypewriter(
+    reason,
+    streamDelayMs,
+    TYPING_INTERVAL_MS
+  );
 
   return (
     <article
@@ -144,8 +168,32 @@ function PersonaSuggestionCard({
       <p className="text-[11px] uppercase tracking-wider text-stone-500 mb-3">
         {perspective}
       </p>
-      <p className="text-sm text-stone-700 mb-3 leading-relaxed">{reason}</p>
-      <ul className="space-y-1.5">
+      {/* Reason text streams in word-by-word so each persona reads like it's
+          being generated live. The thin caret in the persona's accent colour
+          disappears once the full reason has rendered. We also expose the
+          finished text to screen readers via the off-screen <span> so the
+          animation doesn't make assistive tech wait for the stream. */}
+      <p className="text-sm text-stone-700 mb-3 leading-relaxed">
+        <span aria-hidden>{shown}</span>
+        {!done && (
+          <span
+            className="typing-caret"
+            style={{ background: accent }}
+            aria-hidden
+          />
+        )}
+        <span className="sr-only">{reason}</span>
+      </p>
+      {/* Reserve the impact-card space from the start so the article doesn't
+          jolt vertically when the cards fade in. They become interactive only
+          once the reason has finished — same moment the LLM "concludes". */}
+      <ul
+        className="space-y-1.5"
+        style={{
+          opacity: done ? 1 : 0,
+          transition: "opacity 320ms ease",
+        }}
+      >
         {cards.map((c) => (
           <li
             key={c.id}
@@ -164,4 +212,79 @@ function PersonaSuggestionCard({
       </ul>
     </article>
   );
+}
+
+/**
+ * Word-by-word streaming hook. Splits `text` on whitespace (keeping the
+ * separators so spacing is preserved on re-join) and reveals one token per
+ * `intervalMs` tick after `startDelayMs`. Respects `prefers-reduced-motion`
+ * by skipping straight to the full text.
+ *
+ * Stable across the component lifecycle:
+ *   - Memoises tokens on the source string, so identity is stable across
+ *     re-renders that don't change `reason`.
+ *   - Cleans up the timer on unmount or when text changes mid-stream.
+ *   - Uses functional `setShownCount` so closures over a stale count can't
+ *     overwrite a newer tick.
+ */
+function useTypewriter(
+  text: string,
+  startDelayMs: number,
+  intervalMs: number
+): { shown: string; done: boolean } {
+  const reduceMotion = usePrefersReducedMotion();
+  const tokens = useMemo(
+    () => text.split(/(\s+)/).filter((t) => t.length > 0),
+    [text]
+  );
+  const [shownCount, setShownCount] = useState(
+    reduceMotion ? tokens.length : 0
+  );
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setShownCount(tokens.length);
+      return;
+    }
+    setShownCount(0);
+    let cancelled = false;
+    let interval: number | undefined;
+
+    const startHandle = window.setTimeout(() => {
+      if (cancelled) return;
+      interval = window.setInterval(() => {
+        setShownCount((prev) => {
+          if (prev >= tokens.length) {
+            if (interval !== undefined) window.clearInterval(interval);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, intervalMs);
+    }, startDelayMs);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(startHandle);
+      if (interval !== undefined) window.clearInterval(interval);
+    };
+  }, [tokens, startDelayMs, intervalMs, reduceMotion]);
+
+  const done = shownCount >= tokens.length;
+  return { shown: tokens.slice(0, shownCount).join(""), done };
+}
+
+/** True when the user has requested reduced motion (system setting). We hook
+ *  into the same media query React uses for matchMedia changes so a runtime
+ *  toggle takes effect without a reload. */
+function usePrefersReducedMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduce(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setReduce(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return reduce;
 }

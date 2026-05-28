@@ -78,17 +78,24 @@ export default function RiskRobinGame() {
     };
   }, [s.gameStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // reveal_context → ai_discussion (async: provider may be remote)
+  // While the player is reading the freshly-flipped Context Card, we
+  // pre-fetch the locals' suggestions in the background. The dispatch
+  // populates `aiAnalystResponses` but no longer changes the stage — the
+  // player advances manually via the dock "Next →" button (handled in
+  // buildPrimaryAction below). That way they have time to read the context
+  // before the locals' panel takes over the screen.
   useEffect(() => {
     if (s.stage !== "reveal_context" || !s.currentContext) return;
+    // Already fetched for this context? Skip — runAI dispatches even when
+    // results are identical, which would cause a noisy re-render loop.
+    if (s.aiAnalystResponses.length > 0) return;
     let cancelled = false;
-    const t = setTimeout(async () => {
+    (async () => {
       if (cancelled) return;
       await g.runAI(s.currentContext!, s.playerHand);
-    }, 700);
+    })();
     return () => {
       cancelled = true;
-      clearTimeout(t);
     };
   }, [s.stage, s.currentContext?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -124,13 +131,12 @@ export default function RiskRobinGame() {
 
   // Centre the player's view on whatever Robin is talking about right now.
   // We re-tested with users who skipped straight to their hand and ignored the
-  // locals' perspectives; pulling the relevant region to the centre of the
-  // viewport on stage entry makes the two-act flow (read locals → choose
-  // impact) physically obvious.
+  // locals' perspectives — and lost their place on subsequent stages too.
+  // Pulling the relevant region to the centre of the viewport on stage entry
+  // makes the multi-step flow physically obvious: the page always moves to
+  // *where the next thing happens*, with Robin parked just below.
   useEffect(() => {
-    let area: string | null = null;
-    if (s.stage === "ai_discussion") area = "ai_panel";
-    else if (s.stage === "choose_impact") area = "impact_hand";
+    const area = STAGE_TO_FOCUS_AREA[s.stage];
     if (!area) return;
     const el = document.querySelector<HTMLElement>(`[data-area="${area}"]`);
     if (!el) return;
@@ -173,6 +179,7 @@ export default function RiskRobinGame() {
   }, [s.stage, s.caseStudies.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const primary = useMemo(() => buildPrimaryAction(s.stage, g), [s.stage, g]);
+  const back = useMemo(() => buildBackAction(s.stage, g), [s.stage, g]);
 
   const latestCase = s.caseStudies[s.caseStudies.length - 1];
 
@@ -182,7 +189,7 @@ export default function RiskRobinGame() {
   // final_report we can use less bottom padding.
   const showDocks =
     s.gameStarted && s.stage !== "final_report" && s.stage !== "final_reflection";
-  const rootPadding = showDocks ? "pb-52" : "pb-12";
+  const rootPadding = showDocks ? "pb-60" : "pb-12";
 
   return (
     <PersonaNamesProvider overrides={s.personaNames}>
@@ -432,6 +439,7 @@ export default function RiskRobinGame() {
             roundNumber={s.roundNumber}
             totalRounds={s.totalRounds}
             primary={primary}
+            back={back}
           />
         </>
       )}
@@ -503,29 +511,130 @@ function isDimmed(stage: Stage, area: string): boolean {
   return dimMap[stage].includes(area);
 }
 
+/**
+ * Map of stage → `data-area` to centre in the viewport on stage entry. Kept
+ * separate from the dim-map / highlight-map because "where Robin is looking"
+ * (focus) is conceptually different from "what's the bright thing on the
+ * page" (highlight) and "what's faded out" (dim).
+ */
+const STAGE_TO_FOCUS_AREA: Partial<Record<Stage, string>> = {
+  ai_discussion: "ai_panel",
+  choose_impact: "impact_hand",
+  collect_evidence: "evidence_input",
+  follow_up: "follow_up",
+  rate_impact: "ratings",
+  robin_summary: "summary",
+  classify_impact: "classify",
+  update_board: "progress_board",
+};
+
+export type PrimaryAction = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  /** "primary" (default) — solid orange CTA in the dock that *is* the next
+   *  action. "pointer" — softer dock CTA whose click scrolls to and re-pulses
+   *  the real submit button living inside the active panel above. */
+  variant?: "primary" | "pointer";
+};
+
+/** Optional back-one-stage link rendered alongside the primary CTA. Labels
+ *  are stage-specific ("Re-read locals", "Edit your example") so the player
+ *  knows what they'll be looking at again. */
+export type BackAction = {
+  label: string;
+  onClick: () => void;
+  title?: string;
+};
+
+/**
+ * Scroll the dock "pointer" CTA target into view. Most stages have a real
+ * submit button inside the active panel (marked with `data-cta="submit"`) —
+ * we scroll to it AND restart its entrance pulse so the eye is pulled to it.
+ *
+ * The `choose_impact` stage has no single button (the user clicks a card
+ * directly), so we just scroll to the area itself. The CSS pulse is harmless
+ * if the target isn't a `.btn-primary` button.
+ */
+function jumpToInPanelSubmit(area: string) {
+  const btn = document.querySelector<HTMLButtonElement>(
+    `[data-area="${area}"] [data-cta="submit"]`
+  );
+  const target =
+    btn ??
+    document.querySelector<HTMLElement>(`[data-area="${area}"]`);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (btn) {
+    btn.classList.remove("btn-primary-jolt");
+    // Force reflow so the keyframes restart from 0.
+    void btn.offsetWidth;
+    btn.classList.add("btn-primary-jolt");
+    window.setTimeout(() => btn.classList.remove("btn-primary-jolt"), 600);
+    if (!btn.disabled) btn.focus({ preventScroll: true });
+  }
+}
+
 function buildPrimaryAction(
   stage: Stage,
   g: ReturnType<typeof useGame>
-): { label: string; onClick: () => void; disabled?: boolean } | undefined {
+): PrimaryAction | undefined {
   switch (stage) {
     case "round_intro":
       return { label: "Draw context →", onClick: g.beginRound };
-    case "reveal_context":
-      return undefined; // auto-advance to AI
+    case "reveal_context": {
+      // Locals are being fetched in the background (see the pre-fetch
+      // effect above). We always show a "Next →" CTA so the player feels in
+      // control, but disable it while suggestions haven't arrived — that's
+      // a few hundred ms of LLM latency at most.
+      const ready = g.state.aiAnalystResponses.length > 0;
+      return ready
+        ? {
+            label: "Next: see the locals →",
+            onClick: g.openDiscussion,
+          }
+        : {
+            label: "Locals are thinking…",
+            onClick: () => {},
+            disabled: true,
+          };
+    }
     case "ai_discussion":
       return { label: "Choose from my hand →", onClick: g.openHand };
     case "choose_impact":
-      return undefined; // click a card
+      // No single "next" — the player clicks one of the cards above. The
+      // dock pointer is a soft companion telling them where to look.
+      return {
+        label: "Tap a card above",
+        onClick: () => jumpToInPanelSubmit("impact_hand"),
+        variant: "pointer",
+      };
     case "collect_evidence":
-      return undefined; // submit lives in EvidenceInput
+      return {
+        label: "Submit example above",
+        onClick: () => jumpToInPanelSubmit("evidence_input"),
+        variant: "pointer",
+      };
     case "follow_up":
-      return undefined; // submit/skip live in FollowUpInput
+      return {
+        label: "Add detail above",
+        onClick: () => jumpToInPanelSubmit("follow_up"),
+        variant: "pointer",
+      };
     case "rate_impact":
-      return undefined; // submit lives in RatingQuestions
+      return {
+        label: "Answer the three questions above",
+        onClick: () => jumpToInPanelSubmit("ratings"),
+        variant: "pointer",
+      };
     case "robin_summary":
       return { label: "Classify on the board →", onClick: g.openClassify };
     case "classify_impact":
-      return undefined; // confirm lives in CategoryClassification
+      return {
+        label: "Confirm categories above",
+        onClick: () => jumpToInPanelSubmit("classify"),
+        variant: "pointer",
+      };
     case "update_board":
       return { label: "Draw a replacement card →", onClick: g.drawReplacement };
     case "draw_replacement":
@@ -535,6 +644,59 @@ function buildPrimaryAction(
             ? "Add final reflections →"
             : "Next round →",
         onClick: g.next,
+      };
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Per-stage back link, rendered next to the primary CTA. We label these
+ * descriptively so the player knows what re-appears when they click — e.g.
+ * "Re-read locals" tells them they're going back to the AI panel they may
+ * have skimmed too fast. Stages where back is one-way (committed rounds,
+ * welcome, the auto-advance reveal) return undefined.
+ */
+function buildBackAction(
+  stage: Stage,
+  g: ReturnType<typeof useGame>
+): BackAction | undefined {
+  switch (stage) {
+    case "choose_impact":
+      return {
+        label: "← Re-read locals",
+        onClick: g.goBack,
+        title: "Go back to the locals' perspectives",
+      };
+    case "collect_evidence":
+      return {
+        label: "← Pick a different card",
+        onClick: g.goBack,
+        title: "Go back to your hand and choose another impact",
+      };
+    case "follow_up":
+      return {
+        label: "← Edit your example",
+        onClick: g.goBack,
+        title: "Go back and revise your original evidence",
+      };
+    case "rate_impact":
+      return {
+        label: "← Back",
+        onClick: g.goBack,
+        title: "Go back to your evidence / follow-up",
+      };
+    case "robin_summary":
+      return {
+        label: "← Change my ratings",
+        onClick: g.goBack,
+        title: "Go back and adjust the three quick questions",
+      };
+    case "classify_impact":
+      return {
+        label: "← Back to Robin's draft",
+        onClick: g.goBack,
+        title: "Go back and re-read Robin's draft case study",
       };
     default:
       return undefined;

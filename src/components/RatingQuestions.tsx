@@ -134,6 +134,7 @@ export default function RatingQuestions({
           ← Pick a different card
         </button>
         <button
+          data-cta="submit"
           className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
           disabled={!ready}
           onClick={onSubmit}

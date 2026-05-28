@@ -84,6 +84,10 @@ type Action =
   | { type: "START_GAME" }
   | { type: "REVEAL_CONTEXT" }
   | { type: "SET_AI_SUGGESTIONS"; payload: AISuggestion[] }
+  // Manual gate: move from reveal_context → ai_discussion. Decoupled from
+  // SET_AI_SUGGESTIONS so the player has time to read the context card
+  // before the locals' panel takes over the screen.
+  | { type: "OPEN_AI_DISCUSSION" }
   | { type: "OPEN_HAND" }
   | { type: "SELECT_IMPACT"; payload: ImpactCard }
   | { type: "SELECT_WILDCARD" }
@@ -92,6 +96,11 @@ type Action =
   // selection plus any draft evidence/follow-up/ratings so the player has a
   // clean slate to reconsider.
   | { type: "RECONSIDER_IMPACT" }
+  // Step the player back ONE stage. Preserves anything they typed where it
+  // still makes sense (e.g. evidence text when stepping rate_impact →
+  // collect_evidence) and clears only the data that no longer applies to
+  // the target stage. See the reducer for the per-stage mapping.
+  | { type: "GO_BACK" }
   | { type: "SUBMIT_EVIDENCE"; payload: string }
   // Upgrade the templated follow-up question with an LLM-generated one. Only
   // applied while we're still on the follow_up stage for the same context.
@@ -157,13 +166,22 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case "SET_AI_SUGGESTIONS": {
+      // Pre-fetch result: stash the locals' suggestions but keep the player
+      // on reveal_context. The dock "Next →" button advances the stage when
+      // the player is ready — this gives them time to read the context card
+      // before being whisked to the discussion. See OPEN_AI_DISCUSSION.
       return {
         ...state,
         aiAnalystResponses: action.payload,
+      };
+    }
+
+    case "OPEN_AI_DISCUSSION":
+      return {
+        ...state,
         stage: "ai_discussion",
         highlightedArea: STAGE_HIGHLIGHT.ai_discussion,
       };
-    }
 
     case "OPEN_HAND":
       return {
@@ -217,6 +235,88 @@ function reducer(state: GameState, action: Action): GameState {
         stage: "choose_impact",
         highlightedArea: STAGE_HIGHLIGHT.choose_impact,
       };
+    }
+
+    case "GO_BACK": {
+      // One-stage back navigation. Only defined for stages where back is a
+      // sensible operation — committing the round (CONFIRM_CLASSIFICATION
+      // and beyond) is one-way because it mutates the board scores and case
+      // study log.
+      switch (state.stage) {
+        case "choose_impact":
+          // Re-read the locals' arguments. Nothing to clear — the AI panel
+          // and context card are still in state.
+          return {
+            ...state,
+            stage: "ai_discussion",
+            highlightedArea: STAGE_HIGHLIGHT.ai_discussion,
+          };
+        case "collect_evidence":
+          // Same shape as RECONSIDER_IMPACT: clear the selection so the
+          // player can pick a different card. Evidence draft is cleared
+          // because it referred to the now-unselected impact.
+          return {
+            ...state,
+            selectedImpact: null,
+            wildcardDraft: { title: "", description: "" },
+            playerEvidence: "",
+            followUpQuestion: null,
+            followUpAnswer: "",
+            ratingDraft: { importance: null, valence: null, councilPriority: null },
+            stage: "choose_impact",
+            highlightedArea: STAGE_HIGHLIGHT.choose_impact,
+          };
+        case "follow_up":
+          // Step back into the evidence box. Drop the follow-up question /
+          // answer since the player is reworking the original example —
+          // re-submitting will re-trigger the vague-evidence check.
+          return {
+            ...state,
+            followUpQuestion: null,
+            followUpAnswer: "",
+            stage: "collect_evidence",
+            highlightedArea: STAGE_HIGHLIGHT.collect_evidence,
+          };
+        case "rate_impact": {
+          // Two possible upstream stages: follow_up if Robin asked a
+          // follow-up question, collect_evidence otherwise. We preserve
+          // ratingDraft so the player can come back forward without
+          // re-picking, but reset proposedCategories since those are
+          // recomputed from the ratings step on the way forward.
+          const target: Stage = state.followUpQuestion
+            ? "follow_up"
+            : "collect_evidence";
+          return {
+            ...state,
+            proposedCategories: [],
+            userCategories: [],
+            stage: target,
+            highlightedArea: STAGE_HIGHLIGHT[target],
+          };
+        }
+        case "robin_summary":
+          // Back into ratings. Clear the proposed categories since they're
+          // recomputed by SUBMIT_RATINGS on the way forward; otherwise the
+          // player sees stale suggestions from the previous pass.
+          return {
+            ...state,
+            proposedCategories: [],
+            userCategories: [],
+            stage: "rate_impact",
+            highlightedArea: STAGE_HIGHLIGHT.rate_impact,
+          };
+        case "classify_impact":
+          // Pure stage shift — Robin's draft is still in state.
+          return {
+            ...state,
+            stage: "robin_summary",
+            highlightedArea: STAGE_HIGHLIGHT.robin_summary,
+          };
+        default:
+          // No back from welcome / round_intro / reveal_context /
+          // ai_discussion / update_board / draw_replacement / final_*.
+          return state;
+      }
     }
 
     case "SUBMIT_EVIDENCE": {
@@ -524,6 +624,10 @@ export function useGame(provider: AIProvider = defaultProvider) {
     dispatch({ type: "SET_AI_SUGGESTIONS", payload: suggestions });
   }, [provider]);
 
+  const openDiscussion = useCallback(
+    () => dispatch({ type: "OPEN_AI_DISCUSSION" }),
+    []
+  );
   const openHand    = useCallback(() => dispatch({ type: "OPEN_HAND" }), []);
   const selectImpact   = useCallback((c: ImpactCard) => dispatch({ type: "SELECT_IMPACT", payload: c }), []);
   const selectWildcard = useCallback(() => dispatch({ type: "SELECT_WILDCARD" }), []);
@@ -536,6 +640,7 @@ export function useGame(provider: AIProvider = defaultProvider) {
     () => dispatch({ type: "RECONSIDER_IMPACT" }),
     []
   );
+  const goBack = useCallback(() => dispatch({ type: "GO_BACK" }), []);
   const submitEvidence = useCallback(
     (text: string) => dispatch({ type: "SUBMIT_EVIDENCE", payload: text }),
     []
@@ -598,11 +703,13 @@ export function useGame(provider: AIProvider = defaultProvider) {
       startGame,
       beginRound,
       runAI,
+      openDiscussion,
       openHand,
       selectImpact,
       selectWildcard,
       updateWildcard,
       reconsiderImpact,
+      goBack,
       submitEvidence,
       submitFollowup,
       upgradeFollowupQuestion,
@@ -622,8 +729,8 @@ export function useGame(provider: AIProvider = defaultProvider) {
       isHighlighted,
     }),
     [
-      state, startGame, beginRound, runAI, openHand, selectImpact, selectWildcard,
-      updateWildcard, reconsiderImpact, submitEvidence, submitFollowup, upgradeFollowupQuestion,
+      state, startGame, beginRound, runAI, openDiscussion, openHand, selectImpact, selectWildcard,
+      updateWildcard, reconsiderImpact, goBack, submitEvidence, submitFollowup, upgradeFollowupQuestion,
       upgradeLatestSummary, skipFollowup, updateRatings,
       submitRatings, openClassify, toggleUserCategory, confirmClassification,
       drawReplacement, next, updateFinalReflections, submitFinalReflections,

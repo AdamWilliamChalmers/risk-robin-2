@@ -50,16 +50,25 @@ export default function RobinGuide({ state, highlighted }: Props) {
             fresh one, restarting the CSS keyframes. The wrapper above keeps
             its identity so the `highlighted` ring (tour spotlight) isn't
             disturbed. */}
+        {/* Dock sizing rationale: user tests showed Robin's line being missed
+            entirely while players focused on their cards. We bumped the
+            avatar, body font and padding so the dock has more visual mass —
+            and lifted the orange ring opacity so it reads as the "live"
+            element on the page. If you change the avatar size or vertical
+            padding here, update:
+              - `bottom: 14rem` on .spotlight-overlay in index.css
+              - `pb-60` rootPadding in RiskRobinGame.tsx
+            so in-flow content and the locals spotlight still clear the dock. */}
         <div
           key={state.stage}
-          className="robin-nudge bg-white rounded-3xl ring-2 ring-robinOrange/40 px-5 py-2.5 flex items-center gap-3.5"
+          className="robin-nudge bg-white rounded-3xl ring-2 ring-robinOrange/60 shadow-lg px-6 py-4 flex items-center gap-4"
         >
-          <div className="shrink-0 rounded-2xl bg-white ring-2 ring-robinOrange/60 p-1 overflow-hidden robin-avatar-bounce">
-            <AnimatedRobin className="block w-14 h-14" />
+          <div className="shrink-0 rounded-2xl bg-white ring-2 ring-robinOrange/70 p-1 overflow-hidden robin-avatar-bounce">
+            <AnimatedRobin className="block w-20 h-20" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-robinOrange">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="text-[13px] font-bold uppercase tracking-wider text-robinOrange">
                 Chief Analyst Robin
               </div>
               <InfoChip label="Who is Robin?" ariaLabel="About Robin" placement="top">
@@ -73,7 +82,7 @@ export default function RobinGuide({ state, highlighted }: Props) {
             </div>
             <p
               key={state.stage}
-              className="text-stone-800 leading-snug text-[15px] font-medium whitespace-pre-line animate-fadeIn"
+              className="text-stone-800 leading-relaxed text-[18px] font-medium whitespace-pre-line animate-fadeIn"
             >
               {line}
             </p>
@@ -103,7 +112,7 @@ function robinLine(s: GameState): string {
       return `Round ${s.roundNumber} of ${s.totalRounds}. Click the orange "Draw context" button below to deal this round's Context Card.`;
     case "reveal_context":
       return s.currentContext
-        ? `The context is "${s.currentContext.title}". Let's see what the locals have to say…`
+        ? `The context is "${s.currentContext.title}". Click "Next" to see what the locals have to say…`
         : "Let's see what comes up next.";
     case "ai_discussion":
       return "Take a moment with your three locals — read each one carefully. They often disagree, and that's the point: notice whose life weighs differently here. When you're ready to give *your* perspective, click \u201cChoose from my hand \u2192\u201d below.";
